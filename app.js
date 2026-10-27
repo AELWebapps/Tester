@@ -8,7 +8,7 @@ const dropZone = document.querySelector("#dropZone");
 const clearButton = document.querySelector("#clearButton");
 const generateButton = document.querySelector("#generateButton");
 const status = document.querySelector("#status");
-
+alert("app.js loaded");
 let photos = [];
 
 photoInput.addEventListener("change", event => addFiles(event.target.files));
