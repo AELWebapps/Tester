@@ -1,27 +1,5 @@
 "use strict";
 
-/* =========================================================
-   PHOTO RECORD GENERATOR
-   Required index.html elements:
-
-   templateInput
-   photoInput
-   serviceDate
-   location
-   previewGrid
-   photoCount
-   dropZone
-   clearButton
-   generateButton
-   status
-
-   Required Word placeholders:
-
-   {{SERVICE_DATE}}
-   {{LOCATION}}
-   {{PHOTO_TABLE}}
-   ========================================================= */
-
 document.addEventListener("DOMContentLoaded", initializeApp);
 
 function initializeApp() {
@@ -43,29 +21,22 @@ function initializeApp() {
     .map(([name]) => name);
 
   if (missingElements.length > 0) {
-    console.error("Missing HTML elements:", missingElements);
-
     alert(
-      "The application could not start because these HTML elements " +
-      "were not found:\n\n" +
+      "The application could not start because these elements are missing:\n\n" +
       missingElements.join("\n")
     );
 
+    console.error("Missing HTML elements:", missingElements);
     return;
   }
 
   let photos = [];
-
-  /*
-   * Event listeners
-   */
 
   elements.photoInput.addEventListener("change", event => {
     safelyAddFiles(event.target.files);
   });
 
   elements.clearButton.addEventListener("click", clearPhotos);
-
   elements.generateButton.addEventListener("click", generateReport);
 
   ["dragenter", "dragover"].forEach(eventName => {
@@ -88,10 +59,6 @@ function initializeApp() {
     safelyAddFiles(event.dataTransfer.files);
   });
 
-  /*
-   * Start-up check
-   */
-
   if (typeof JSZip === "undefined") {
     setStatus(
       "JSZip did not load. Check the JSZip script in index.html.",
@@ -105,9 +72,9 @@ function initializeApp() {
 
   renderPhotos();
 
-  /*
-   * File selection
-   */
+  /* ======================================================
+     PHOTO SELECTION
+     ====================================================== */
 
   function safelyAddFiles(fileList) {
     try {
@@ -130,27 +97,26 @@ function initializeApp() {
       return;
     }
 
-    const validTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png"
-    ];
-
     const validFiles = files.filter(file => {
-      const typeIsValid = validTypes.includes(
-        String(file.type).toLowerCase()
+      const validMimeTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png"
+      ];
+
+      return (
+        validMimeTypes.includes(
+          String(file.type).toLowerCase()
+        ) ||
+        /\.(jpg|jpeg|png)$/i.test(file.name)
       );
-
-      const extensionIsValid = /\.(jpg|jpeg|png)$/i.test(file.name);
-
-      return typeIsValid || extensionIsValid;
     });
 
     const rejectedCount = files.length - validFiles.length;
 
     if (validFiles.length === 0) {
       setStatus(
-        "No supported photographs were selected. Use JPG or PNG files.",
+        "No supported photos were selected. Use JPG or PNG files.",
         true
       );
 
@@ -178,13 +144,13 @@ function initializeApp() {
     }
 
     elements.photoInput.value = "";
-
     renderPhotos();
 
     let message = `${photos.length} photo(s) selected.`;
 
     if (rejectedCount > 0) {
-      message += ` ${rejectedCount} unsupported file(s) were ignored.`;
+      message +=
+        ` ${rejectedCount} unsupported file(s) were ignored.`;
     }
 
     setStatus(message);
@@ -209,9 +175,9 @@ function initializeApp() {
     return filename.replace(/\.[^.]+$/, "");
   }
 
-  /*
-   * Photo basket
-   */
+  /* ======================================================
+     PHOTO BASKET
+     ====================================================== */
 
   function clearPhotos() {
     photos.forEach(photo => {
@@ -219,7 +185,6 @@ function initializeApp() {
     });
 
     photos = [];
-
     renderPhotos();
     setStatus("Photo selection cleared.");
   }
@@ -230,7 +195,6 @@ function initializeApp() {
     }
 
     URL.revokeObjectURL(photos[index].previewUrl);
-
     photos.splice(index, 1);
 
     renderPhotos();
@@ -247,10 +211,13 @@ function initializeApp() {
       return;
     }
 
-    const currentPhoto = photos[index];
-
-    photos[index] = photos[targetIndex];
-    photos[targetIndex] = currentPhoto;
+    [
+      photos[index],
+      photos[targetIndex]
+    ] = [
+      photos[targetIndex],
+      photos[index]
+    ];
 
     renderPhotos();
   }
@@ -279,12 +246,6 @@ function initializeApp() {
       image.src = photo.previewUrl;
       image.alt = `Selected photo ${index + 1}`;
 
-      image.addEventListener("error", () => {
-        console.error(
-          `Could not display preview for ${photo.file.name}`
-        );
-      });
-
       const body = document.createElement("div");
       body.className = "photo-body";
 
@@ -309,7 +270,7 @@ function initializeApp() {
 
       const moveLeftButton = makeButton(
         "←",
-        "Move earlier",
+        "Move photo earlier",
         () => movePhoto(index, -1)
       );
 
@@ -317,7 +278,7 @@ function initializeApp() {
 
       const moveRightButton = makeButton(
         "→",
-        "Move later",
+        "Move photo later",
         () => movePhoto(index, 1)
       );
 
@@ -361,15 +322,14 @@ function initializeApp() {
     button.className = `small ${extraClass}`.trim();
     button.textContent = text;
     button.setAttribute("aria-label", ariaLabel);
-
     button.addEventListener("click", clickHandler);
 
     return button;
   }
 
-  /*
-   * Word generation
-   */
+  /* ======================================================
+     WORD GENERATION
+     ====================================================== */
 
   async function generateReport() {
     const templateFile =
@@ -382,48 +342,33 @@ function initializeApp() {
       elements.locationInput.value.trim();
 
     if (!templateFile) {
-      setStatus(
-        "Choose the Word template first.",
-        true
-      );
+      setStatus("Choose the Word template first.", true);
       return;
     }
 
     if (!/\.docx$/i.test(templateFile.name)) {
-      setStatus(
-        "The template must be a.docx file.",
-        true
-      );
+      setStatus("The template must be a.docx file.", true);
       return;
     }
 
     if (!serviceDate) {
-      setStatus(
-        "Enter the service date.",
-        true
-      );
+      setStatus("Enter the service date.", true);
       return;
     }
 
     if (!location) {
-      setStatus(
-        "Enter the location.",
-        true
-      );
+      setStatus("Enter the location.", true);
       return;
     }
 
     if (photos.length === 0) {
-      setStatus(
-        "Select at least one photograph.",
-        true
-      );
+      setStatus("Select at least one photograph.", true);
       return;
     }
 
     if (typeof JSZip === "undefined") {
       setStatus(
-        "JSZip is unavailable. Check the JSZip script in index.html.",
+        "JSZip is unavailable. Check the JSZip script.",
         true
       );
       return;
@@ -431,11 +376,11 @@ function initializeApp() {
 
     elements.generateButton.disabled = true;
 
-    setStatus(
-      `Preparing ${photos.length} photo(s)...`
-    );
-
     try {
+      setStatus(
+        `Preparing ${photos.length} photo(s)...`
+      );
+
       const templateBytes =
         await templateFile.arrayBuffer();
 
@@ -468,13 +413,13 @@ function initializeApp() {
 
       if (!relationshipsFile) {
         throw new Error(
-          "The template does not contain the Word relationships file."
+          "The template relationships file is missing."
         );
       }
 
       if (!contentTypesFile) {
         throw new Error(
-          "The template does not contain [Content_Types].xml."
+          "The template content-types file is missing."
         );
       }
 
@@ -507,14 +452,15 @@ function initializeApp() {
         index += 1
       ) {
         setStatus(
-          `Processing photo ${index + 1} of ${photos.length}...`
+          `Processing photo ${index + 1} ` +
+          `of ${photos.length}...`
         );
 
         const processedImage =
           await normalizeImage(
             photos[index].file,
-            1600,
-            1200
+            1400,
+            1000
           );
 
         const mediaName =
@@ -549,9 +495,7 @@ function initializeApp() {
       }
 
       contentTypesXml =
-        ensureJpegContentType(
-          contentTypesXml
-        );
+        ensureJpegContentType(contentTypesXml);
 
       const photoTableXml =
         createPhotoTableXml(imageRecords);
@@ -563,10 +507,7 @@ function initializeApp() {
           photoTableXml
         );
 
-      zip.file(
-        documentPath,
-        documentXml
-      );
+      zip.file(documentPath, documentXml);
 
       zip.file(
         relationshipsPath,
@@ -583,12 +524,15 @@ function initializeApp() {
       const outputBlob =
         await zip.generateAsync({
           type: "blob",
+
           mimeType:
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            "application/vnd.openxmlformats-officedocument." +
+            "wordprocessingml.document"
         });
 
       const filename =
-        `Photo_Record_${serviceDate}_${safeFilename(location)}.docx`;
+        `Photo_Record_${serviceDate}_` +
+        `${safeFilename(location)}.docx`;
 
       downloadBlob(outputBlob, filename);
 
@@ -607,9 +551,9 @@ function initializeApp() {
     }
   }
 
-  /*
-   * Placeholder replacement
-   */
+  /* ======================================================
+     PLACEHOLDER REPLACEMENT
+     ====================================================== */
 
   function replaceSimplePlaceholder(
     xml,
@@ -618,8 +562,7 @@ function initializeApp() {
   ) {
     if (!xml.includes(placeholder)) {
       throw new Error(
-        `The Word template is missing ${placeholder}. ` +
-        "Type the placeholder continuously in one Word text run."
+        `The Word template is missing ${placeholder}.`
       );
     }
 
@@ -642,17 +585,15 @@ function initializeApp() {
         "application/xml"
       );
 
-    const parseError =
-      xmlDocument.querySelector("parsererror");
-
-    if (parseError) {
+    if (xmlDocument.querySelector("parsererror")) {
       throw new Error(
         "The Word document XML could not be read."
       );
     }
 
     const namespace =
-      "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+      "http://schemas.openxmlformats.org/" +
+      "wordprocessingml/2006/main";
 
     const textNodes =
       Array.from(
@@ -669,8 +610,7 @@ function initializeApp() {
 
     if (!targetTextNode) {
       throw new Error(
-        `The Word template is missing ${placeholder}. ` +
-        "Put this placeholder in its own paragraph."
+        `The Word template is missing ${placeholder}.`
       );
     }
 
@@ -685,7 +625,8 @@ function initializeApp() {
 
     if (!paragraph ||!paragraph.parentNode) {
       throw new Error(
-        "The photo-table placeholder paragraph could not be located."
+        "The photo-table placeholder paragraph " +
+        "could not be found."
       );
     }
 
@@ -701,10 +642,7 @@ function initializeApp() {
         "application/xml"
       );
 
-    const tableParseError =
-      tableDocument.querySelector("parsererror");
-
-    if (tableParseError) {
+    if (tableDocument.querySelector("parsererror")) {
       throw new Error(
         "The generated photo table XML is invalid."
       );
@@ -728,9 +666,9 @@ function initializeApp() {
       .serializeToString(xmlDocument);
   }
 
-  /*
-   * Image processing
-   */
+  /* ======================================================
+     IMAGE PROCESSING
+     ====================================================== */
 
   async function normalizeImage(
     file,
@@ -775,6 +713,7 @@ function initializeApp() {
     }
 
     context.fillStyle = "#ffffff";
+
     context.fillRect(
       0,
       0,
@@ -819,6 +758,7 @@ function initializeApp() {
   function loadImage(file) {
     return new Promise((resolve, reject) => {
       const image = new Image();
+
       const objectUrl =
         URL.createObjectURL(file);
 
@@ -841,11 +781,21 @@ function initializeApp() {
     });
   }
 
-  /*
-   * Word table construction
-   */
+  /* ======================================================
+     CENTRED WORD PHOTO TABLE
+     ====================================================== */
 
   function createPhotoTableXml(imageRecords) {
+    /*
+     * Fixed safe table width.
+     *
+     * 8,600 twips gives two 4,300-twip columns.
+     * The table is explicitly centred.
+     */
+
+    const tableWidth = 8600;
+    const cellWidth = tableWidth / 2;
+
     const rows = [];
 
     for (
@@ -856,19 +806,26 @@ function initializeApp() {
       const leftCell =
         createPhotoCellXml(
           imageRecords[index],
-          index + 1
+          index + 1,
+          cellWidth
         );
 
       const rightCell =
         imageRecords[index + 1]
           ? createPhotoCellXml(
               imageRecords[index + 1],
-              index + 2
+              index + 2,
+              cellWidth
             )
-          : createEmptyCellXml();
+          : createEmptyCellXml(cellWidth);
 
       rows.push(`
         <w:tr>
+          <w:trPr>
+            <!-- Keep each pair together -->
+            <w:cantSplit/>
+          </w:trPr>
+
           ${leftCell}
           ${rightCell}
         </w:tr>
@@ -878,8 +835,44 @@ function initializeApp() {
     return `
       <w:tbl>
         <w:tblPr>
-          <w:tblW w:w="9000" w:type="dxa"/>
+          <w:tblW
+            w:w="${tableWidth}"
+            w:type="dxa"
+          />
+
+          <!-- Do not allow automatic expansion -->
           <w:tblLayout w:type="fixed"/>
+
+          <!-- Centre the table -->
+          <w:jc w:val="center"/>
+
+          <!-- Remove inherited table indentation -->
+          <w:tblInd
+            w:w="0"
+            w:type="dxa"
+          />
+
+          <w:tblCellMar>
+            <w:top
+              w:w="80"
+              w:type="dxa"
+            />
+
+            <w:left
+              w:w="100"
+              w:type="dxa"
+            />
+
+            <w:bottom
+              w:w="80"
+              w:type="dxa"
+            />
+
+            <w:right
+              w:w="100"
+              w:type="dxa"
+            />
+          </w:tblCellMar>
 
           <w:tblBorders>
             <w:top
@@ -887,26 +880,31 @@ function initializeApp() {
               w:sz="4"
               w:color="B7C4CE"
             />
+
             <w:left
               w:val="single"
               w:sz="4"
               w:color="B7C4CE"
             />
+
             <w:bottom
               w:val="single"
               w:sz="4"
               w:color="B7C4CE"
             />
+
             <w:right
               w:val="single"
               w:sz="4"
               w:color="B7C4CE"
             />
+
             <w:insideH
               w:val="single"
               w:sz="4"
               w:color="B7C4CE"
             />
+
             <w:insideV
               w:val="single"
               w:sz="4"
@@ -916,8 +914,8 @@ function initializeApp() {
         </w:tblPr>
 
         <w:tblGrid>
-          <w:gridCol w:w="4500"/>
-          <w:gridCol w:w="4500"/>
+          <w:gridCol w:w="${cellWidth}"/>
+          <w:gridCol w:w="${cellWidth}"/>
         </w:tblGrid>
 
         ${rows.join("")}
@@ -927,15 +925,18 @@ function initializeApp() {
 
   function createPhotoCellXml(
     imageRecord,
-    imageNumber
+    imageNumber,
+    cellWidth
   ) {
     /*
-     * EMU dimensions.
-     * Approximately 4 inches × 2.9 inches maximum.
+     * Images are intentionally narrower than their cells.
+     *
+     * Width: approximately 2.79 inches
+     * Height: approximately 2.35 inches
      */
 
-    const maximumWidthEmu = 3657600;
-    const maximumHeightEmu = 2651760;
+    const maximumWidthEmu = 2550000;
+    const maximumHeightEmu = 2150000;
 
     const widthRatio =
       maximumWidthEmu / imageRecord.width;
@@ -943,21 +944,18 @@ function initializeApp() {
     const heightRatio =
       maximumHeightEmu / imageRecord.height;
 
-    const scale =
-      Math.min(
-        widthRatio,
-        heightRatio
-      );
+    const scale = Math.min(
+      widthRatio,
+      heightRatio
+    );
 
-    const cx =
-      Math.round(
-        imageRecord.width * scale
-      );
+    const cx = Math.round(
+      imageRecord.width * scale
+    );
 
-    const cy =
-      Math.round(
-        imageRecord.height * scale
-      );
+    const cy = Math.round(
+      imageRecord.height * scale
+    );
 
     const drawingId =
       1000 + imageNumber;
@@ -969,15 +967,21 @@ function initializeApp() {
       <w:tc>
         <w:tcPr>
           <w:tcW
-            w:w="4500"
+            w:w="${cellWidth}"
             w:type="dxa"
           />
+
           <w:vAlign w:val="center"/>
         </w:tcPr>
 
         <w:p>
           <w:pPr>
             <w:jc w:val="center"/>
+
+            <w:spacing
+              w:before="0"
+              w:after="40"
+            />
           </w:pPr>
 
           <w:r>
@@ -1014,6 +1018,7 @@ function initializeApp() {
                           id="${pictureId}"
                           name="Photo ${imageNumber}"
                         />
+
                         <pic:cNvPicPr/>
                       </pic:nvPicPr>
 
@@ -1021,6 +1026,7 @@ function initializeApp() {
                         <a:blip
                           r:embed="${imageRecord.relationshipId}"
                         />
+
                         <a:stretch>
                           <a:fillRect/>
                         </a:stretch>
@@ -1028,10 +1034,8 @@ function initializeApp() {
 
                       <pic:spPr>
                         <a:xfrm>
-                          <a:off
-                            x="0"
-                            y="0"
-                          />
+                          <a:off x="0" y="0"/>
+
                           <a:ext
                             cx="${cx}"
                             cy="${cy}"
@@ -1053,6 +1057,11 @@ function initializeApp() {
         <w:p>
           <w:pPr>
             <w:jc w:val="center"/>
+
+            <w:spacing
+              w:before="0"
+              w:after="0"
+            />
           </w:pPr>
 
           <w:r>
@@ -1069,30 +1078,36 @@ function initializeApp() {
     `;
   }
 
-  function createEmptyCellXml() {
+  function createEmptyCellXml(cellWidth) {
     return `
       <w:tc>
         <w:tcPr>
           <w:tcW
-            w:w="4500"
+            w:w="${cellWidth}"
             w:type="dxa"
           />
+
+          <w:vAlign w:val="center"/>
         </w:tcPr>
-        <w:p/>
+
+        <w:p>
+          <w:pPr>
+            <w:jc w:val="center"/>
+          </w:pPr>
+        </w:p>
       </w:tc>
     `;
   }
 
-  /*
-   * Word package helpers
-   */
+  /* ======================================================
+     WORD PACKAGE HELPERS
+     ====================================================== */
 
   function findAvailableRelationshipId(
     relationshipsXml,
     offset
   ) {
-    let number =
-      5000 + offset;
+    let number = 5000 + offset;
 
     while (
       relationshipsXml.includes(
@@ -1137,8 +1152,13 @@ function initializeApp() {
   function ensureJpegContentType(
     contentTypesXml
   ) {
+    /*
+     * Check specifically for.jpg.
+     * A.jpeg declaration does not cover.jpg.
+     */
+
     if (
-      /Extension="jpe?g"/i.test(
+      /<Default[^>]+Extension="jpg"[^>]*>/i.test(
         contentTypesXml
       )
     ) {
@@ -1155,13 +1175,17 @@ function initializeApp() {
 
     return contentTypesXml.replace(
       "</Types>",
-      '<Default Extension="jpg" ContentType="image/jpeg"/></Types>'
+
+      '<Default ' +
+      'Extension="jpg" ' +
+      'ContentType="image/jpeg"/>' +
+      "</Types>"
     );
   }
 
-  /*
-   * General helpers
-   */
+  /* ======================================================
+     GENERAL HELPERS
+     ====================================================== */
 
   function formatDate(value) {
     const date =
