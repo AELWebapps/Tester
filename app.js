@@ -3,23 +3,31 @@
 /*
  * PHOTO RECORD GENERATOR
  *
- * Required Word placeholders:
+ * Required Word template placeholders:
  *
  * {{SERVICE_DATE}}
  * {{LOCATION}}
  * {{PHOTO_TABLE}}
  *
- * Layout rules:
+ * Layout:
  *
  * 1–8 photos:
- * Two columns on one page.
+ * Two columns on the original Supporting Photos page.
  *
  * 9 photos:
- * Three columns × three rows.
+ * Three columns × three rows on the original page.
  *
  * More than 9 photos:
  * Maximum nine photos per page.
- * Every additional group starts on a new page.
+ * Every additional page includes:
+ *
+ * Supporting Photos:
+ * Service date: [selected date]
+ * Location: [entered location]
+ *
+ * [gap]
+ *
+ * Photo table
  */
 
 document.addEventListener("DOMContentLoaded", initializeApp);
@@ -134,14 +142,14 @@ function initializeApp() {
       return;
     }
 
-    const acceptedTypes = [
+    const validMimeTypes = [
       "image/jpeg",
       "image/jpg",
       "image/png"
     ];
 
     const validFiles = files.filter(file => {
-      const validType = acceptedTypes.includes(
+      const validType = validMimeTypes.includes(
         String(file.type).toLowerCase()
       );
 
@@ -159,13 +167,14 @@ function initializeApp() {
       elements.photoInput.value = "";
 
       setStatus(
-        "No supported photos were selected. Use JPG or PNG files.",
+        "No supported photos were selected. Use JPG, JPEG, or PNG files.",
         true
       );
 
       return;
     }
 
+    let addedCount = 0;
     let duplicateCount = 0;
 
     for (const file of validFiles) {
@@ -186,6 +195,8 @@ function initializeApp() {
         caption: removeFileExtension(file.name),
         previewUrl: URL.createObjectURL(file)
       });
+
+      addedCount += 1;
     }
 
     elements.photoInput.value = "";
@@ -202,6 +213,11 @@ function initializeApp() {
     if (rejectedCount > 0) {
       message +=
         ` ${rejectedCount} unsupported file(s) were ignored.`;
+    }
+
+    if (addedCount === 0 && duplicateCount > 0) {
+      message =
+        "The selected photos were already in the basket.";
     }
 
     setStatus(message);
@@ -246,13 +262,17 @@ function initializeApp() {
       return;
     }
 
-    URL.revokeObjectURL(photos[index].previewUrl);
+    URL.revokeObjectURL(
+      photos[index].previewUrl
+    );
 
     photos.splice(index, 1);
 
     renderPhotos();
 
-    setStatus(`${photos.length} photo(s) selected.`);
+    setStatus(
+      `${photos.length} photo(s) selected.`
+    );
   }
 
   function movePhoto(index, direction) {
@@ -274,7 +294,6 @@ function initializeApp() {
     ];
 
     renderPhotos();
-
     setStatus("Photo order updated.");
   }
 
@@ -285,71 +304,102 @@ function initializeApp() {
     elements.previewGrid.innerHTML = "";
 
     if (photos.length === 0) {
-      const emptyState = document.createElement("p");
+      const emptyState =
+        document.createElement("p");
 
       emptyState.className = "empty-state";
-      emptyState.textContent = "No photos selected yet.";
+      emptyState.textContent =
+        "No photos selected yet.";
 
       elements.previewGrid.append(emptyState);
+
       return;
     }
 
     photos.forEach((photo, index) => {
-      const card = document.createElement("article");
+      const card =
+        document.createElement("article");
+
       card.className = "photo-card";
 
-      const image = document.createElement("img");
+      const image =
+        document.createElement("img");
 
       image.src = photo.previewUrl;
-      image.alt = `Selected photo ${index + 1}`;
+      image.alt =
+        `Selected photo ${index + 1}`;
 
-      const body = document.createElement("div");
+      const body =
+        document.createElement("div");
+
       body.className = "photo-body";
 
-      const title = document.createElement("strong");
-      title.textContent = `Photo ${index + 1}`;
+      const title =
+        document.createElement("strong");
 
-      const filename = document.createElement("p");
+      title.textContent =
+        `Photo ${index + 1}`;
 
-      filename.textContent = photo.file.name;
-      filename.style.wordBreak = "break-word";
+      const filename =
+        document.createElement("p");
 
-      const captionInput = document.createElement("input");
+      filename.textContent =
+        photo.file.name;
+
+      filename.style.wordBreak =
+        "break-word";
+
+      const captionInput =
+        document.createElement("input");
 
       captionInput.type = "text";
-      captionInput.placeholder = "Photo caption";
-      captionInput.value = photo.caption;
+      captionInput.placeholder =
+        "Photo caption";
 
-      captionInput.addEventListener("input", event => {
-        photos[index].caption = event.target.value;
-      });
+      captionInput.value =
+        photo.caption;
 
-      const controls = document.createElement("div");
-      controls.className = "photo-controls";
-
-      const moveLeftButton = makeButton(
-        "←",
-        "Move photo earlier",
-        () => movePhoto(index, -1)
+      captionInput.addEventListener(
+        "input",
+        event => {
+          photos[index].caption =
+            event.target.value;
+        }
       );
 
-      moveLeftButton.disabled = index === 0;
+      const controls =
+        document.createElement("div");
 
-      const moveRightButton = makeButton(
-        "→",
-        "Move photo later",
-        () => movePhoto(index, 1)
-      );
+      controls.className =
+        "photo-controls";
+
+      const moveLeftButton =
+        makeButton(
+          "←",
+          "Move photo earlier",
+          () => movePhoto(index, -1)
+        );
+
+      moveLeftButton.disabled =
+        index === 0;
+
+      const moveRightButton =
+        makeButton(
+          "→",
+          "Move photo later",
+          () => movePhoto(index, 1)
+        );
 
       moveRightButton.disabled =
         index === photos.length - 1;
 
-      const removeButton = makeButton(
-        "Remove",
-        "Remove photo",
-        () => removePhoto(index),
-        "danger"
-      );
+      const removeButton =
+        makeButton(
+          "Remove",
+          "Remove photo",
+          () => removePhoto(index),
+          "danger"
+        );
 
       controls.append(
         moveLeftButton,
@@ -364,7 +414,11 @@ function initializeApp() {
         controls
       );
 
-      card.append(image, body);
+      card.append(
+        image,
+        body
+      );
+
       elements.previewGrid.append(card);
     });
   }
@@ -375,12 +429,20 @@ function initializeApp() {
     clickHandler,
     extraClass = ""
   ) {
-    const button = document.createElement("button");
+    const button =
+      document.createElement("button");
 
     button.type = "button";
-    button.className = `small ${extraClass}`.trim();
+
+    button.className =
+      `small ${extraClass}`.trim();
+
     button.textContent = text;
-    button.setAttribute("aria-label", ariaLabel);
+
+    button.setAttribute(
+      "aria-label",
+      ariaLabel
+    );
 
     button.addEventListener(
       "click",
@@ -391,7 +453,7 @@ function initializeApp() {
   }
 
   /* =====================================================
-     GENERATE WORD DOCUMENT
+     WORD GENERATION
      ===================================================== */
 
   async function generateReport() {
@@ -409,6 +471,7 @@ function initializeApp() {
         "Choose the Word template first.",
         true
       );
+
       return;
     }
 
@@ -417,16 +480,25 @@ function initializeApp() {
         "The template must be a.docx file.",
         true
       );
+
       return;
     }
 
     if (!serviceDate) {
-      setStatus("Enter the service date.", true);
+      setStatus(
+        "Enter the service date.",
+        true
+      );
+
       return;
     }
 
     if (!location) {
-      setStatus("Enter the location.", true);
+      setStatus(
+        "Enter the location.",
+        true
+      );
+
       return;
     }
 
@@ -435,14 +507,16 @@ function initializeApp() {
         "Select at least one photograph.",
         true
       );
+
       return;
     }
 
     if (typeof JSZip === "undefined") {
       setStatus(
-        "JSZip is unavailable. Check the JSZip script.",
+        "JSZip is unavailable. Check the JSZip script in index.html.",
         true
       );
+
       return;
     }
 
@@ -504,17 +578,22 @@ function initializeApp() {
       let contentTypesXml =
         await contentTypesFile.async("string");
 
-      documentXml = replaceSimplePlaceholder(
-        documentXml,
-        "{{SERVICE_DATE}}",
-        formatDate(serviceDate)
-      );
+      const formattedServiceDate =
+        formatDate(serviceDate);
 
-      documentXml = replaceSimplePlaceholder(
-        documentXml,
-        "{{LOCATION}}",
-        location
-      );
+      documentXml =
+        replaceSimplePlaceholder(
+          documentXml,
+          "{{SERVICE_DATE}}",
+          formattedServiceDate
+        );
+
+      documentXml =
+        replaceSimplePlaceholder(
+          documentXml,
+          "{{LOCATION}}",
+          location
+        );
 
       const imageRecords = [];
 
@@ -567,16 +646,22 @@ function initializeApp() {
       }
 
       contentTypesXml =
-        ensureJpegContentType(contentTypesXml);
+        ensureJpegContentType(
+          contentTypesXml
+        );
 
-      const photoContentXml =
-        createPhotoContentXml(imageRecords);
+      const generatedPhotoXml =
+        createPhotoContentXml(
+          imageRecords,
+          formattedServiceDate,
+          location
+        );
 
       documentXml =
         replacePhotoTablePlaceholder(
           documentXml,
           "{{PHOTO_TABLE}}",
-          photoContentXml
+          generatedPhotoXml
         );
 
       zip.file(
@@ -594,7 +679,9 @@ function initializeApp() {
         contentTypesXml
       );
 
-      setStatus("Creating the Word document...");
+      setStatus(
+        "Creating the Word document..."
+      );
 
       const outputBlob =
         await zip.generateAsync({
@@ -609,7 +696,10 @@ function initializeApp() {
         `Photo_Record_${serviceDate}_` +
         `${safeFilename(location)}.docx`;
 
-      downloadBlob(outputBlob, filename);
+      downloadBlob(
+        outputBlob,
+        filename
+      );
 
       setStatus(
         `Report generated successfully: ${filename}`
@@ -655,7 +745,8 @@ function initializeApp() {
     placeholder,
     generatedXml
   ) {
-    const parser = new DOMParser();
+    const parser =
+      new DOMParser();
 
     const xmlDocument =
       parser.parseFromString(
@@ -664,7 +755,9 @@ function initializeApp() {
       );
 
     if (
-      xmlDocument.querySelector("parsererror")
+      xmlDocument.querySelector(
+        "parsererror"
+      )
     ) {
       throw new Error(
         "The Word document XML could not be read."
@@ -675,16 +768,19 @@ function initializeApp() {
       "http://schemas.openxmlformats.org/" +
       "wordprocessingml/2006/main";
 
-    const textNodes = Array.from(
-      xmlDocument.getElementsByTagNameNS(
-        namespace,
-        "t"
-      )
-    );
+    const textNodes =
+      Array.from(
+        xmlDocument.getElementsByTagNameNS(
+          namespace,
+          "t"
+        )
+      );
 
     const targetTextNode =
       textNodes.find(node =>
-        node.textContent.includes(placeholder)
+        node.textContent.includes(
+          placeholder
+        )
       );
 
     if (!targetTextNode) {
@@ -713,11 +809,6 @@ function initializeApp() {
       );
     }
 
-    /*
-     * This wrapper may contain multiple tables and
-     * page-break paragraphs.
-     */
-
     const fragmentDocument =
       parser.parseFromString(
         `<root
@@ -731,16 +822,19 @@ function initializeApp() {
       );
 
     if (
-      fragmentDocument.querySelector("parsererror")
+      fragmentDocument.querySelector(
+        "parsererror"
+      )
     ) {
       throw new Error(
         "The generated photo layout XML is invalid."
       );
     }
 
-    const generatedElements = Array.from(
-      fragmentDocument.documentElement.children
-    );
+    const generatedElements =
+      Array.from(
+        fragmentDocument.documentElement.children
+      );
 
     if (generatedElements.length === 0) {
       throw new Error(
@@ -769,7 +863,9 @@ function initializeApp() {
     );
 
     return new XMLSerializer()
-      .serializeToString(xmlDocument);
+      .serializeToString(
+        xmlDocument
+      );
   }
 
   /* =====================================================
@@ -864,18 +960,24 @@ function initializeApp() {
 
   function loadImage(file) {
     return new Promise((resolve, reject) => {
-      const image = new Image();
+      const image =
+        new Image();
 
       const objectUrl =
         URL.createObjectURL(file);
 
       image.onload = () => {
-        URL.revokeObjectURL(objectUrl);
+        URL.revokeObjectURL(
+          objectUrl
+        );
+
         resolve(image);
       };
 
       image.onerror = () => {
-        URL.revokeObjectURL(objectUrl);
+        URL.revokeObjectURL(
+          objectUrl
+        );
 
         reject(
           new Error(
@@ -889,22 +991,25 @@ function initializeApp() {
   }
 
   /* =====================================================
-     PHOTO PAGES AND TABLES
+     PHOTO PAGE CREATION
      ===================================================== */
 
-  function createPhotoContentXml(imageRecords) {
+  function createPhotoContentXml(
+    imageRecords,
+    serviceDate,
+    location
+  ) {
     /*
-     * Rules:
-     *
      * 1–8 photos:
-     * One two-column table.
+     * Use one centred two-column table.
      *
      * 9 photos:
-     * One three-column table with three rows.
+     * Use one centred three-column table.
      *
      * More than 9:
      * Maximum nine photos per page.
-     * Each page uses three columns.
+     * Every new page repeats the Supporting Photos
+     * heading, date, location, and spacing.
      */
 
     if (imageRecords.length <= 8) {
@@ -930,6 +1035,24 @@ function initializeApp() {
           pageStart + photosPerPage
         );
 
+      /*
+       * The first page already has the heading,
+       * date, and location in the Word template.
+       */
+
+      if (pageStart > 0) {
+        fragments.push(
+          createPageBreakXml()
+        );
+
+        fragments.push(
+          createPhotoPageHeaderXml(
+            serviceDate,
+            location
+          )
+        );
+      }
+
       fragments.push(
         createSinglePhotoTable(
           pagePhotos,
@@ -937,14 +1060,6 @@ function initializeApp() {
           pageStart
         )
       );
-
-      const hasNextPage =
-        pageStart + photosPerPage <
-        imageRecords.length;
-
-      if (hasNextPage) {
-        fragments.push(createPageBreakXml());
-      }
     }
 
     return fragments.join("");
@@ -967,16 +1082,95 @@ function initializeApp() {
     `;
   }
 
+  function createPhotoPageHeaderXml(
+    serviceDate,
+    location
+  ) {
+    return `
+      <!-- Supporting Photos heading -->
+      <w:p>
+        <w:pPr>
+          <w:spacing
+            w:before="0"
+            w:after="60"
+          />
+        </w:pPr>
+
+        <w:r>
+          <w:rPr>
+            <w:b/>
+            <w:sz w:val="24"/>
+          </w:rPr>
+
+          <w:t>Supporting Photos:</w:t>
+        </w:r>
+      </w:p>
+
+      <!-- Service date -->
+      <w:p>
+        <w:pPr>
+          <w:spacing
+            w:before="0"
+            w:after="20"
+          />
+        </w:pPr>
+
+        <w:r>
+          <w:rPr>
+            <w:sz w:val="20"/>
+          </w:rPr>
+
+          <w:t>${escapeXml(
+            `Service date: ${serviceDate}`
+          )}</w:t>
+        </w:r>
+      </w:p>
+
+      <!-- Location -->
+      <w:p>
+        <w:pPr>
+          <w:spacing
+            w:before="0"
+            w:after="180"
+          />
+        </w:pPr>
+
+        <w:r>
+          <w:rPr>
+            <w:sz w:val="20"/>
+          </w:rPr>
+
+          <w:t>${escapeXml(
+            `Location: ${location}`
+          )}</w:t>
+        </w:r>
+      </w:p>
+
+      <!-- Additional gap before the photo table -->
+      <w:p>
+        <w:pPr>
+          <w:spacing
+            w:before="0"
+            w:after="100"
+          />
+        </w:pPr>
+
+        <w:r>
+          <w:t xml:space="preserve"> </w:t>
+        </w:r>
+      </w:p>
+    `;
+  }
+
+  /* =====================================================
+     PHOTO TABLE CREATION
+     ===================================================== */
+
   function createSinglePhotoTable(
     imageRecords,
     columnsPerRow,
     startingIndex = 0
   ) {
-    /*
-     * Keep every table centred and inside
-     * the safe page width.
-     */
-
     const tableWidth = 8600;
 
     const cellWidth =
@@ -1020,7 +1214,9 @@ function initializeApp() {
           );
         } else {
           cells.push(
-            createEmptyCellXml(cellWidth)
+            createEmptyCellXml(
+              cellWidth
+            )
           );
         }
       }
@@ -1028,7 +1224,7 @@ function initializeApp() {
       rows.push(`
         <w:tr>
           <w:trPr>
-            <!-- Keep one complete row together -->
+            <!-- Prevent a photo row splitting -->
             <w:cantSplit/>
           </w:trPr>
 
@@ -1054,13 +1250,13 @@ function initializeApp() {
             w:type="dxa"
           />
 
-          <!-- Prevent automatic column expansion -->
+          <!-- Fixed-width columns -->
           <w:tblLayout w:type="fixed"/>
 
           <!-- Centre the table -->
           <w:jc w:val="center"/>
 
-          <!-- Remove inherited indentation -->
+          <!-- No inherited indentation -->
           <w:tblInd
             w:w="0"
             w:type="dxa"
@@ -1143,8 +1339,8 @@ function initializeApp() {
     columnsPerRow
   ) {
     /*
-     * Two-column pages use larger images.
-     * Three-column pages use smaller images.
+     * Two-column tables use larger photos.
+     * Three-column tables use smaller photos.
      */
 
     const maximumWidthEmu =
@@ -1383,13 +1579,6 @@ function initializeApp() {
   function ensureJpegContentType(
     contentTypesXml
   ) {
-    /*
-     * Register.jpg specifically.
-     *
-     * An existing.jpeg registration does not
-     * necessarily cover.jpg files.
-     */
-
     if (
       /<Default[^>]+Extension="jpg"[^>]*>/i.test(
         contentTypesXml
@@ -1476,7 +1665,8 @@ function initializeApp() {
     message,
     isError = false
   ) {
-    elements.status.textContent = message;
+    elements.status.textContent =
+      message;
 
     elements.status.style.color =
       isError
