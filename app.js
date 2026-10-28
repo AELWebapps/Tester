@@ -1,8 +1,27 @@
 "use strict";
 
+/*
+ * PHOTO RECORD GENERATOR
+ *
+ * Word template placeholders:
+ *
+ * {{SERVICE_DATE}}
+ * {{LOCATION}}
+ * {{PHOTO_TABLE}}
+ *
+ * Layout:
+ *
+ * 1–8 photos = 2 columns
+ * 9+ photos = 3 columns
+ */
+
 document.addEventListener("DOMContentLoaded", initializeApp);
 
 function initializeApp() {
+  /* =====================================================
+     HTML ELEMENTS
+     ===================================================== */
+
   const elements = {
     templateInput: document.querySelector("#templateInput"),
     photoInput: document.querySelector("#photoInput"),
@@ -21,43 +40,81 @@ function initializeApp() {
     .map(([name]) => name);
 
   if (missingElements.length > 0) {
+    console.error(
+      "Missing required HTML elements:",
+      missingElements
+    );
+
     alert(
-      "The application could not start because these elements are missing:\n\n" +
+      "The application could not start because these HTML " +
+      "elements were not found:\n\n" +
       missingElements.join("\n")
     );
 
-    console.error("Missing HTML elements:", missingElements);
     return;
   }
 
   let photos = [];
 
-  elements.photoInput.addEventListener("change", event => {
-    safelyAddFiles(event.target.files);
-  });
+  /* =====================================================
+     EVENT LISTENERS
+     ===================================================== */
 
-  elements.clearButton.addEventListener("click", clearPhotos);
-  elements.generateButton.addEventListener("click", generateReport);
+  elements.photoInput.addEventListener(
+    "change",
+    event => {
+      safelyAddFiles(event.target.files);
+    }
+  );
+
+  elements.clearButton.addEventListener(
+    "click",
+    clearPhotos
+  );
+
+  elements.generateButton.addEventListener(
+    "click",
+    generateReport
+  );
 
   ["dragenter", "dragover"].forEach(eventName => {
-    elements.dropZone.addEventListener(eventName, event => {
-      event.preventDefault();
-      event.stopPropagation();
-      elements.dropZone.classList.add("dragging");
-    });
+    elements.dropZone.addEventListener(
+      eventName,
+      event => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        elements.dropZone.classList.add("dragging");
+      }
+    );
   });
 
-  ["dragleave", "dragend", "drop"].forEach(eventName => {
-    elements.dropZone.addEventListener(eventName, event => {
-      event.preventDefault();
-      event.stopPropagation();
-      elements.dropZone.classList.remove("dragging");
-    });
-  });
+  ["dragleave", "dragend", "drop"].forEach(
+    eventName => {
+      elements.dropZone.addEventListener(
+        eventName,
+        event => {
+          event.preventDefault();
+          event.stopPropagation();
 
-  elements.dropZone.addEventListener("drop", event => {
-    safelyAddFiles(event.dataTransfer.files);
-  });
+          elements.dropZone.classList.remove(
+            "dragging"
+          );
+        }
+      );
+    }
+  );
+
+  elements.dropZone.addEventListener(
+    "drop",
+    event => {
+      safelyAddFiles(event.dataTransfer.files);
+    }
+  );
+
+  /* =====================================================
+     INITIAL CHECK
+     ===================================================== */
 
   if (typeof JSZip === "undefined") {
     setStatus(
@@ -72,15 +129,18 @@ function initializeApp() {
 
   renderPhotos();
 
-  /* ======================================================
-     PHOTO SELECTION
-     ====================================================== */
+  /* =====================================================
+     PHOTO FILE SELECTION
+     ===================================================== */
 
   function safelyAddFiles(fileList) {
     try {
       addFiles(fileList);
     } catch (error) {
-      console.error("Photo-selection error:", error);
+      console.error(
+        "Photo-selection error:",
+        error
+      );
 
       setStatus(
         `Photo selection failed: ${error.message}`,
@@ -93,45 +153,59 @@ function initializeApp() {
     const files = Array.from(fileList || []);
 
     if (files.length === 0) {
-      setStatus("No files were selected.", true);
+      setStatus(
+        "No files were selected.",
+        true
+      );
+
       return;
     }
 
-    const validFiles = files.filter(file => {
-      const validMimeTypes = [
-        "image/jpeg",
-        "image/jpg",
-        "image/png"
-      ];
+    const validMimeTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png"
+    ];
 
-      return (
+    const validFiles = files.filter(file => {
+      const mimeTypeIsValid =
         validMimeTypes.includes(
           String(file.type).toLowerCase()
-        ) ||
-        /\.(jpg|jpeg|png)$/i.test(file.name)
-      );
+        );
+
+      const extensionIsValid =
+        /\.(jpg|jpeg|png)$/i.test(file.name);
+
+      return mimeTypeIsValid || extensionIsValid;
     });
 
-    const rejectedCount = files.length - validFiles.length;
+    const rejectedCount =
+      files.length - validFiles.length;
 
     if (validFiles.length === 0) {
       setStatus(
-        "No supported photos were selected. Use JPG or PNG files.",
+        "No supported photos were selected. " +
+        "Please use JPG, JPEG, or PNG files.",
         true
       );
 
       elements.photoInput.value = "";
+
       return;
     }
 
+    let addedCount = 0;
+    let duplicateCount = 0;
+
     for (const file of validFiles) {
-      const duplicate = photos.some(photo =>
+      const isDuplicate = photos.some(photo =>
         photo.file.name === file.name &&
         photo.file.size === file.size &&
         photo.file.lastModified === file.lastModified
       );
 
-      if (duplicate) {
+      if (isDuplicate) {
+        duplicateCount += 1;
         continue;
       }
 
@@ -141,16 +215,30 @@ function initializeApp() {
         caption: removeFileExtension(file.name),
         previewUrl: URL.createObjectURL(file)
       });
+
+      addedCount += 1;
     }
 
     elements.photoInput.value = "";
+
     renderPhotos();
 
-    let message = `${photos.length} photo(s) selected.`;
+    let message =
+      `${photos.length} photo(s) selected.`;
+
+    if (duplicateCount > 0) {
+      message +=
+        ` ${duplicateCount} duplicate file(s) were ignored.`;
+    }
 
     if (rejectedCount > 0) {
       message +=
         ` ${rejectedCount} unsupported file(s) were ignored.`;
+    }
+
+    if (addedCount === 0 && duplicateCount > 0) {
+      message =
+        "The selected photos were already in the basket.";
     }
 
     setStatus(message);
@@ -172,12 +260,15 @@ function initializeApp() {
   }
 
   function removeFileExtension(filename) {
-    return filename.replace(/\.[^.]+$/, "");
+    return String(filename).replace(
+      /\.[^.]+$/,
+      ""
+    );
   }
 
-  /* ======================================================
+  /* =====================================================
      PHOTO BASKET
-     ====================================================== */
+     ===================================================== */
 
   function clearPhotos() {
     photos.forEach(photo => {
@@ -185,7 +276,9 @@ function initializeApp() {
     });
 
     photos = [];
+
     renderPhotos();
+
     setStatus("Photo selection cleared.");
   }
 
@@ -194,11 +287,17 @@ function initializeApp() {
       return;
     }
 
-    URL.revokeObjectURL(photos[index].previewUrl);
+    URL.revokeObjectURL(
+      photos[index].previewUrl
+    );
+
     photos.splice(index, 1);
 
     renderPhotos();
-    setStatus(`${photos.length} photo(s) selected.`);
+
+    setStatus(
+      `${photos.length} photo(s) selected.`
+    );
   }
 
   function movePhoto(index, direction) {
@@ -220,6 +319,10 @@ function initializeApp() {
     ];
 
     renderPhotos();
+
+    setStatus(
+      "Photo order updated."
+    );
   }
 
   function renderPhotos() {
@@ -229,68 +332,110 @@ function initializeApp() {
     elements.previewGrid.innerHTML = "";
 
     if (photos.length === 0) {
-      const emptyState = document.createElement("p");
+      const emptyState =
+        document.createElement("p");
 
       emptyState.className = "empty-state";
-      emptyState.textContent = "No photos selected yet.";
+      emptyState.textContent =
+        "No photos selected yet.";
 
       elements.previewGrid.append(emptyState);
+
       return;
     }
 
     photos.forEach((photo, index) => {
-      const card = document.createElement("article");
+      const card =
+        document.createElement("article");
+
       card.className = "photo-card";
 
-      const image = document.createElement("img");
-      image.src = photo.previewUrl;
-      image.alt = `Selected photo ${index + 1}`;
+      const image =
+        document.createElement("img");
 
-      const body = document.createElement("div");
+      image.src = photo.previewUrl;
+      image.alt =
+        `Selected photo ${index + 1}`;
+
+      image.addEventListener(
+        "error",
+        () => {
+          console.error(
+            `Could not display preview for ${photo.file.name}`
+          );
+        }
+      );
+
+      const body =
+        document.createElement("div");
+
       body.className = "photo-body";
 
-      const title = document.createElement("strong");
-      title.textContent = `Photo ${index + 1}`;
+      const title =
+        document.createElement("strong");
 
-      const filename = document.createElement("p");
-      filename.textContent = photo.file.name;
-      filename.style.wordBreak = "break-word";
+      title.textContent =
+        `Photo ${index + 1}`;
 
-      const captionInput = document.createElement("input");
+      const filename =
+        document.createElement("p");
+
+      filename.textContent =
+        photo.file.name;
+
+      filename.style.wordBreak =
+        "break-word";
+
+      const captionInput =
+        document.createElement("input");
+
       captionInput.type = "text";
-      captionInput.placeholder = "Photo caption";
-      captionInput.value = photo.caption;
+      captionInput.placeholder =
+        "Photo caption";
+      captionInput.value =
+        photo.caption;
 
-      captionInput.addEventListener("input", event => {
-        photos[index].caption = event.target.value;
-      });
-
-      const controls = document.createElement("div");
-      controls.className = "photo-controls";
-
-      const moveLeftButton = makeButton(
-        "←",
-        "Move photo earlier",
-        () => movePhoto(index, -1)
+      captionInput.addEventListener(
+        "input",
+        event => {
+          photos[index].caption =
+            event.target.value;
+        }
       );
 
-      moveLeftButton.disabled = index === 0;
+      const controls =
+        document.createElement("div");
 
-      const moveRightButton = makeButton(
-        "→",
-        "Move photo later",
-        () => movePhoto(index, 1)
-      );
+      controls.className =
+        "photo-controls";
+
+      const moveLeftButton =
+        makeButton(
+          "←",
+          "Move photo earlier",
+          () => movePhoto(index, -1)
+        );
+
+      moveLeftButton.disabled =
+        index === 0;
+
+      const moveRightButton =
+        makeButton(
+          "→",
+          "Move photo later",
+          () => movePhoto(index, 1)
+        );
 
       moveRightButton.disabled =
         index === photos.length - 1;
 
-      const removeButton = makeButton(
-        "Remove",
-        "Remove photo",
-        () => removePhoto(index),
-        "danger"
-      );
+      const removeButton =
+        makeButton(
+          "Remove",
+          "Remove photo",
+          () => removePhoto(index),
+          "danger"
+        );
 
       controls.append(
         moveLeftButton,
@@ -305,7 +450,11 @@ function initializeApp() {
         controls
       );
 
-      card.append(image, body);
+      card.append(
+        image,
+        body
+      );
+
       elements.previewGrid.append(card);
     });
   }
@@ -316,20 +465,32 @@ function initializeApp() {
     clickHandler,
     extraClass = ""
   ) {
-    const button = document.createElement("button");
+    const button =
+      document.createElement("button");
 
     button.type = "button";
-    button.className = `small ${extraClass}`.trim();
+
+    button.className =
+      `small ${extraClass}`.trim();
+
     button.textContent = text;
-    button.setAttribute("aria-label", ariaLabel);
-    button.addEventListener("click", clickHandler);
+
+    button.setAttribute(
+      "aria-label",
+      ariaLabel
+    );
+
+    button.addEventListener(
+      "click",
+      clickHandler
+    );
 
     return button;
   }
 
-  /* ======================================================
+  /* =====================================================
      WORD GENERATION
-     ====================================================== */
+     ===================================================== */
 
   async function generateReport() {
     const templateFile =
@@ -342,35 +503,56 @@ function initializeApp() {
       elements.locationInput.value.trim();
 
     if (!templateFile) {
-      setStatus("Choose the Word template first.", true);
+      setStatus(
+        "Choose the Word template first.",
+        true
+      );
+
       return;
     }
 
     if (!/\.docx$/i.test(templateFile.name)) {
-      setStatus("The template must be a.docx file.", true);
+      setStatus(
+        "The template must be a.docx file.",
+        true
+      );
+
       return;
     }
 
     if (!serviceDate) {
-      setStatus("Enter the service date.", true);
+      setStatus(
+        "Enter the service date.",
+        true
+      );
+
       return;
     }
 
     if (!location) {
-      setStatus("Enter the location.", true);
+      setStatus(
+        "Enter the location.",
+        true
+      );
+
       return;
     }
 
     if (photos.length === 0) {
-      setStatus("Select at least one photograph.", true);
+      setStatus(
+        "Select at least one photograph.",
+        true
+      );
+
       return;
     }
 
     if (typeof JSZip === "undefined") {
       setStatus(
-        "JSZip is unavailable. Check the JSZip script.",
+        "JSZip is unavailable. Check the JSZip script in index.html.",
         true
       );
+
       return;
     }
 
@@ -385,7 +567,9 @@ function initializeApp() {
         await templateFile.arrayBuffer();
 
       const zip =
-        await JSZip.loadAsync(templateBytes);
+        await JSZip.loadAsync(
+          templateBytes
+        );
 
       const documentPath =
         "word/document.xml";
@@ -432,17 +616,19 @@ function initializeApp() {
       let contentTypesXml =
         await contentTypesFile.async("string");
 
-      documentXml = replaceSimplePlaceholder(
-        documentXml,
-        "{{SERVICE_DATE}}",
-        formatDate(serviceDate)
-      );
+      documentXml =
+        replaceSimplePlaceholder(
+          documentXml,
+          "{{SERVICE_DATE}}",
+          formatDate(serviceDate)
+        );
 
-      documentXml = replaceSimplePlaceholder(
-        documentXml,
-        "{{LOCATION}}",
-        location
-      );
+      documentXml =
+        replaceSimplePlaceholder(
+          documentXml,
+          "{{LOCATION}}",
+          location
+        );
 
       const imageRecords = [];
 
@@ -495,10 +681,14 @@ function initializeApp() {
       }
 
       contentTypesXml =
-        ensureJpegContentType(contentTypesXml);
+        ensureJpegContentType(
+          contentTypesXml
+        );
 
       const photoTableXml =
-        createPhotoTableXml(imageRecords);
+        createPhotoTableXml(
+          imageRecords
+        );
 
       documentXml =
         replacePhotoTablePlaceholder(
@@ -507,7 +697,10 @@ function initializeApp() {
           photoTableXml
         );
 
-      zip.file(documentPath, documentXml);
+      zip.file(
+        documentPath,
+        documentXml
+      );
 
       zip.file(
         relationshipsPath,
@@ -519,28 +712,36 @@ function initializeApp() {
         contentTypesXml
       );
 
-      setStatus("Creating the Word document...");
+      setStatus(
+        "Creating the Word document..."
+      );
 
       const outputBlob =
         await zip.generateAsync({
           type: "blob",
 
           mimeType:
-            "application/vnd.openxmlformats-officedocument." +
-            "wordprocessingml.document"
+            "application/vnd.openxmlformats-" +
+            "officedocument.wordprocessingml.document"
         });
 
       const filename =
         `Photo_Record_${serviceDate}_` +
         `${safeFilename(location)}.docx`;
 
-      downloadBlob(outputBlob, filename);
+      downloadBlob(
+        outputBlob,
+        filename
+      );
 
       setStatus(
         `Report generated successfully: ${filename}`
       );
     } catch (error) {
-      console.error("Report-generation error:", error);
+      console.error(
+        "Report-generation error:",
+        error
+      );
 
       setStatus(
         `Generation failed: ${error.message}`,
@@ -551,9 +752,9 @@ function initializeApp() {
     }
   }
 
-  /* ======================================================
+  /* =====================================================
      PLACEHOLDER REPLACEMENT
-     ====================================================== */
+     ===================================================== */
 
   function replaceSimplePlaceholder(
     xml,
@@ -577,7 +778,8 @@ function initializeApp() {
     placeholder,
     tableXml
   ) {
-    const parser = new DOMParser();
+    const parser =
+      new DOMParser();
 
     const xmlDocument =
       parser.parseFromString(
@@ -585,7 +787,11 @@ function initializeApp() {
         "application/xml"
       );
 
-    if (xmlDocument.querySelector("parsererror")) {
+    if (
+      xmlDocument.querySelector(
+        "parsererror"
+      )
+    ) {
       throw new Error(
         "The Word document XML could not be read."
       );
@@ -605,7 +811,9 @@ function initializeApp() {
 
     const targetTextNode =
       textNodes.find(node =>
-        node.textContent.includes(placeholder)
+        node.textContent.includes(
+          placeholder
+        )
       );
 
     if (!targetTextNode) {
@@ -614,19 +822,23 @@ function initializeApp() {
       );
     }
 
-    let paragraph = targetTextNode;
+    let paragraph =
+      targetTextNode;
 
     while (
       paragraph &&
       paragraph.localName!== "p"
     ) {
-      paragraph = paragraph.parentNode;
+      paragraph =
+        paragraph.parentNode;
     }
 
-    if (!paragraph ||!paragraph.parentNode) {
+    if (
+      !paragraph ||
+      !paragraph.parentNode
+    ) {
       throw new Error(
-        "The photo-table placeholder paragraph " +
-        "could not be found."
+        "The photo-table placeholder paragraph could not be found."
       );
     }
 
@@ -642,14 +854,25 @@ function initializeApp() {
         "application/xml"
       );
 
-    if (tableDocument.querySelector("parsererror")) {
+    if (
+      tableDocument.querySelector(
+        "parsererror"
+      )
+    ) {
       throw new Error(
         "The generated photo table XML is invalid."
       );
     }
 
     const tableElement =
-      tableDocument.documentElement.firstElementChild;
+      tableDocument.documentElement
+        .firstElementChild;
+
+    if (!tableElement) {
+      throw new Error(
+        "The generated photo table is empty."
+      );
+    }
 
     const importedTable =
       xmlDocument.importNode(
@@ -663,19 +886,22 @@ function initializeApp() {
     );
 
     return new XMLSerializer()
-      .serializeToString(xmlDocument);
+      .serializeToString(
+        xmlDocument
+      );
   }
 
-  /* ======================================================
+  /* =====================================================
      IMAGE PROCESSING
-     ====================================================== */
+     ===================================================== */
 
   async function normalizeImage(
     file,
     maxWidth,
     maxHeight
   ) {
-    const image = await loadImage(file);
+    const image =
+      await loadImage(file);
 
     const scale = Math.min(
       1,
@@ -730,23 +956,25 @@ function initializeApp() {
     );
 
     const blob =
-      await new Promise((resolve, reject) => {
-        canvas.toBlob(
-          generatedBlob => {
-            if (generatedBlob) {
-              resolve(generatedBlob);
-            } else {
-              reject(
-                new Error(
-                  `Could not process ${file.name}.`
-                )
-              );
-            }
-          },
-          "image/jpeg",
-          0.86
-        );
-      });
+      await new Promise(
+        (resolve, reject) => {
+          canvas.toBlob(
+            generatedBlob => {
+              if (generatedBlob) {
+                resolve(generatedBlob);
+              } else {
+                reject(
+                  new Error(
+                    `Could not process ${file.name}.`
+                  )
+                );
+              }
+            },
+            "image/jpeg",
+            0.86
+          );
+        }
+      );
 
     return {
       bytes: await blob.arrayBuffer(),
@@ -756,81 +984,128 @@ function initializeApp() {
   }
 
   function loadImage(file) {
-    return new Promise((resolve, reject) => {
-      const image = new Image();
+    return new Promise(
+      (resolve, reject) => {
+        const image =
+          new Image();
 
-      const objectUrl =
-        URL.createObjectURL(file);
+        const objectUrl =
+          URL.createObjectURL(file);
 
-      image.onload = () => {
-        URL.revokeObjectURL(objectUrl);
-        resolve(image);
-      };
+        image.onload = () => {
+          URL.revokeObjectURL(
+            objectUrl
+          );
 
-      image.onerror = () => {
-        URL.revokeObjectURL(objectUrl);
+          resolve(image);
+        };
 
-        reject(
-          new Error(
-            `Could not read ${file.name}.`
-          )
-        );
-      };
+        image.onerror = () => {
+          URL.revokeObjectURL(
+            objectUrl
+          );
 
-      image.src = objectUrl;
-    });
+          reject(
+            new Error(
+              `Could not read ${file.name}.`
+            )
+          );
+        };
+
+        image.src = objectUrl;
+      }
+    );
   }
 
-  /* ======================================================
-     CENTRED WORD PHOTO TABLE
-     ====================================================== */
+  /* =====================================================
+     DYNAMIC WORD TABLE
+     ===================================================== */
 
-  function createPhotoTableXml(imageRecords) {
+  function createPhotoTableXml(
+    imageRecords
+  ) {
     /*
-     * Fixed safe table width.
+     * Layout rule:
      *
-     * 8,600 twips gives two 4,300-twip columns.
-     * The table is explicitly centred.
+     * 1–8 photos = 2 columns
+     * 9+ photos = 3 columns
+     */
+
+    const columnsPerRow =
+      imageRecords.length > 8
+        ? 3
+        : 2;
+
+    /*
+     * 8,600 twips keeps the table within
+     * the safe content area of the page.
      */
 
     const tableWidth = 8600;
-    const cellWidth = tableWidth / 2;
+
+    const cellWidth =
+      Math.floor(
+        tableWidth / columnsPerRow
+      );
 
     const rows = [];
 
     for (
       let index = 0;
       index < imageRecords.length;
-      index += 2
+      index += columnsPerRow
     ) {
-      const leftCell =
-        createPhotoCellXml(
-          imageRecords[index],
-          index + 1,
-          cellWidth
-        );
+      const cells = [];
 
-      const rightCell =
-        imageRecords[index + 1]
-          ? createPhotoCellXml(
-              imageRecords[index + 1],
-              index + 2,
+      for (
+        let column = 0;
+        column < columnsPerRow;
+        column += 1
+      ) {
+        const photoIndex =
+          index + column;
+
+        const photo =
+          imageRecords[photoIndex];
+
+        if (photo) {
+          cells.push(
+            createPhotoCellXml(
+              photo,
+              photoIndex + 1,
+              cellWidth,
+              columnsPerRow
+            )
+          );
+        } else {
+          cells.push(
+            createEmptyCellXml(
               cellWidth
             )
-          : createEmptyCellXml(cellWidth);
+          );
+        }
+      }
 
       rows.push(`
         <w:tr>
           <w:trPr>
-            <!-- Keep each pair together -->
+            <!-- Keep the entire row together -->
             <w:cantSplit/>
           </w:trPr>
 
-          ${leftCell}
-          ${rightCell}
+          ${cells.join("")}
         </w:tr>
       `);
     }
+
+    const gridColumns =
+      Array.from(
+        {
+          length: columnsPerRow
+        },
+        () =>
+          `<w:gridCol w:w="${cellWidth}"/>`
+      ).join("");
 
     return `
       <w:tbl>
@@ -840,13 +1115,13 @@ function initializeApp() {
             w:type="dxa"
           />
 
-          <!-- Do not allow automatic expansion -->
+          <!-- Fixed layout prevents expansion -->
           <w:tblLayout w:type="fixed"/>
 
-          <!-- Centre the table -->
+          <!-- Centre the complete table -->
           <w:jc w:val="center"/>
 
-          <!-- Remove inherited table indentation -->
+          <!-- Remove inherited indentation -->
           <w:tblInd
             w:w="0"
             w:type="dxa"
@@ -854,22 +1129,22 @@ function initializeApp() {
 
           <w:tblCellMar>
             <w:top
-              w:w="80"
+              w:w="60"
               w:type="dxa"
             />
 
             <w:left
-              w:w="100"
-              w:type="dxa"
-            />
-
-            <w:bottom
               w:w="80"
               w:type="dxa"
             />
 
+            <w:bottom
+              w:w="60"
+              w:type="dxa"
+            />
+
             <w:right
-              w:w="100"
+              w:w="80"
               w:type="dxa"
             />
           </w:tblCellMar>
@@ -914,8 +1189,7 @@ function initializeApp() {
         </w:tblPr>
 
         <w:tblGrid>
-          <w:gridCol w:w="${cellWidth}"/>
-          <w:gridCol w:w="${cellWidth}"/>
+          ${gridColumns}
         </w:tblGrid>
 
         ${rows.join("")}
@@ -926,42 +1200,60 @@ function initializeApp() {
   function createPhotoCellXml(
     imageRecord,
     imageNumber,
-    cellWidth
+    cellWidth,
+    columnsPerRow
   ) {
     /*
-     * Images are intentionally narrower than their cells.
+     * Two-column layout permits larger images.
      *
-     * Width: approximately 2.79 inches
-     * Height: approximately 2.35 inches
+     * Three-column layout uses smaller dimensions
+     * so images cannot expand their cells.
      */
 
-    const maximumWidthEmu = 2550000;
-    const maximumHeightEmu = 2150000;
+    const maximumWidthEmu =
+      columnsPerRow === 3
+        ? 1630000
+        : 2550000;
+
+    const maximumHeightEmu =
+      columnsPerRow === 3
+        ? 1510000
+        : 2150000;
 
     const widthRatio =
-      maximumWidthEmu / imageRecord.width;
+      maximumWidthEmu /
+      imageRecord.width;
 
     const heightRatio =
-      maximumHeightEmu / imageRecord.height;
+      maximumHeightEmu /
+      imageRecord.height;
 
-    const scale = Math.min(
-      widthRatio,
-      heightRatio
-    );
+    const scale =
+      Math.min(
+        widthRatio,
+        heightRatio
+      );
 
-    const cx = Math.round(
-      imageRecord.width * scale
-    );
+    const cx =
+      Math.round(
+        imageRecord.width * scale
+      );
 
-    const cy = Math.round(
-      imageRecord.height * scale
-    );
+    const cy =
+      Math.round(
+        imageRecord.height * scale
+      );
 
     const drawingId =
       1000 + imageNumber;
 
     const pictureId =
       2000 + imageNumber;
+
+    const captionFontSize =
+      columnsPerRow === 3
+        ? 16
+        : 18;
 
     return `
       <w:tc>
@@ -980,7 +1272,7 @@ function initializeApp() {
 
             <w:spacing
               w:before="0"
-              w:after="40"
+              w:after="30"
             />
           </w:pPr>
 
@@ -1034,7 +1326,10 @@ function initializeApp() {
 
                       <pic:spPr>
                         <a:xfrm>
-                          <a:off x="0" y="0"/>
+                          <a:off
+                            x="0"
+                            y="0"
+                          />
 
                           <a:ext
                             cx="${cx}"
@@ -1042,7 +1337,9 @@ function initializeApp() {
                           />
                         </a:xfrm>
 
-                        <a:prstGeom prst="rect">
+                        <a:prstGeom
+                          prst="rect"
+                        >
                           <a:avLst/>
                         </a:prstGeom>
                       </pic:spPr>
@@ -1066,7 +1363,9 @@ function initializeApp() {
 
           <w:r>
             <w:rPr>
-              <w:sz w:val="18"/>
+              <w:sz
+                w:val="${captionFontSize}"
+              />
             </w:rPr>
 
             <w:t>${escapeXml(
@@ -1078,7 +1377,9 @@ function initializeApp() {
     `;
   }
 
-  function createEmptyCellXml(cellWidth) {
+  function createEmptyCellXml(
+    cellWidth
+  ) {
     return `
       <w:tc>
         <w:tcPr>
@@ -1099,15 +1400,16 @@ function initializeApp() {
     `;
   }
 
-  /* ======================================================
+  /* =====================================================
      WORD PACKAGE HELPERS
-     ====================================================== */
+     ===================================================== */
 
   function findAvailableRelationshipId(
     relationshipsXml,
     offset
   ) {
-    let number = 5000 + offset;
+    let number =
+      5000 + offset;
 
     while (
       relationshipsXml.includes(
@@ -1154,7 +1456,9 @@ function initializeApp() {
   ) {
     /*
      * Check specifically for.jpg.
-     * A.jpeg declaration does not cover.jpg.
+     *
+     * A.jpeg declaration does not automatically
+     * register files ending in.jpg.
      */
 
     if (
@@ -1166,7 +1470,9 @@ function initializeApp() {
     }
 
     if (
-      !contentTypesXml.includes("</Types>")
+      !contentTypesXml.includes(
+        "</Types>"
+      )
     ) {
       throw new Error(
         "The Word content-types file is invalid."
@@ -1183,13 +1489,15 @@ function initializeApp() {
     );
   }
 
-  /* ======================================================
+  /* =====================================================
      GENERAL HELPERS
-     ====================================================== */
+     ===================================================== */
 
   function formatDate(value) {
     const date =
-      new Date(`${value}T00:00:00`);
+      new Date(
+        `${value}T00:00:00`
+      );
 
     return new Intl.DateTimeFormat(
       "en-GB",
@@ -1212,12 +1520,24 @@ function initializeApp() {
 
   function safeFilename(value) {
     return String(value)
-      .replace(/[<>:"/\\|?*]+/g, "_")
-      .replace(/\s+/g, "_")
-      .replace(/^_+|_+$/g, "");
+      .replace(
+        /[<>:"/\\|?*]+/g,
+        "_"
+      )
+      .replace(
+        /\s+/g,
+        "_"
+      )
+      .replace(
+        /^_+|_+$/g,
+        ""
+      );
   }
 
-  function downloadBlob(blob, filename) {
+  function downloadBlob(
+    blob,
+    filename
+  ) {
     const url =
       URL.createObjectURL(blob);
 
@@ -1228,18 +1548,28 @@ function initializeApp() {
     link.download = filename;
 
     document.body.append(link);
+
     link.click();
     link.remove();
 
-    window.setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 1500);
+    window.setTimeout(
+      () => {
+        URL.revokeObjectURL(url);
+      },
+      1500
+    );
   }
 
-  function setStatus(message, isError = false) {
-    elements.status.textContent = message;
+  function setStatus(
+    message,
+    isError = false
+  ) {
+    elements.status.textContent =
+      message;
 
     elements.status.style.color =
-      isError? "#a83232": "#1f6f43";
+      isError
+        ? "#a83232"
+        : "#1f6f43";
   }
 }
