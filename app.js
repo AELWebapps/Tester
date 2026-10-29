@@ -3,59 +3,86 @@
 /*
  * PHOTO RECORD GENERATOR
  *
- * Required Word template placeholders:
+ * Required template placeholders:
  *
  * {{SERVICE_DATE}}
  * {{LOCATION}}
  * {{PHOTO_TABLE}}
  *
- * Layout:
+ * MODES
  *
- * 1–8 photos:
- * Two columns on the original Supporting Photos page.
+ * Standard:
+ * 1–8 photos = 2 columns
+ * 9 photos = 3 columns
+ * More than 9 = new page every 9 photos
  *
- * 9 photos:
- * Three columns × three rows on the original page.
- *
- * More than 9 photos:
- * Maximum nine photos per page.
- * Every additional page includes:
- *
- * Supporting Photos:
- * Service date: [selected date]
- * Location: [entered location]
- *
- * [gap]
- *
- * Photo table
+ * Fit one page:
+ * Automatically calculates rows and columns
+ * and reduces image dimensions.
  */
 
-document.addEventListener("DOMContentLoaded", initializeApp);
+document.addEventListener(
+  "DOMContentLoaded",
+  initializeApp
+);
 
 function initializeApp() {
+  /* =====================================================
+     ELEMENTS
+     ===================================================== */
+
   const elements = {
-    templateInput: document.querySelector("#templateInput"),
-    photoInput: document.querySelector("#photoInput"),
-    serviceDateInput: document.querySelector("#serviceDate"),
-    locationInput: document.querySelector("#location"),
-    previewGrid: document.querySelector("#previewGrid"),
-    photoCount: document.querySelector("#photoCount"),
-    dropZone: document.querySelector("#dropZone"),
-    clearButton: document.querySelector("#clearButton"),
-    generateButton: document.querySelector("#generateButton"),
-    status: document.querySelector("#status")
+    templateInput:
+      document.querySelector("#templateInput"),
+
+    photoInput:
+      document.querySelector("#photoInput"),
+
+    serviceDateInput:
+      document.querySelector("#serviceDate"),
+
+    locationInput:
+      document.querySelector("#location"),
+
+    fitOnePageMode:
+      document.querySelector("#fitOnePageMode"),
+
+    modeDescription:
+      document.querySelector("#modeDescription"),
+
+    previewGrid:
+      document.querySelector("#previewGrid"),
+
+    photoCount:
+      document.querySelector("#photoCount"),
+
+    dropZone:
+      document.querySelector("#dropZone"),
+
+    clearButton:
+      document.querySelector("#clearButton"),
+
+    generateButton:
+      document.querySelector("#generateButton"),
+
+    status:
+      document.querySelector("#status")
   };
 
-  const missingElements = Object.entries(elements)
-    .filter(([, element]) =>!element)
-    .map(([name]) => name);
+  const missingElements =
+    Object.entries(elements)
+      .filter(([, element]) =>!element)
+      .map(([name]) => name);
 
   if (missingElements.length > 0) {
-    console.error("Missing HTML elements:", missingElements);
+    console.error(
+      "Missing HTML elements:",
+      missingElements
+    );
 
     alert(
-      "The application could not start because these HTML elements " +
-      "were not found:\n\n" +
+      "The application could not start because " +
+      "these HTML elements are missing:\n\n" +
       missingElements.join("\n")
     );
 
@@ -68,9 +95,12 @@ function initializeApp() {
      EVENT LISTENERS
      ===================================================== */
 
-  elements.photoInput.addEventListener("change", event => {
-    safelyAddFiles(event.target.files);
-  });
+  elements.photoInput.addEventListener(
+    "change",
+    event => {
+      safelyAddFiles(event.target.files);
+    }
+  );
 
   elements.clearButton.addEventListener(
     "click",
@@ -82,27 +112,53 @@ function initializeApp() {
     generateReport
   );
 
+  elements.fitOnePageMode.addEventListener(
+    "change",
+    updateModeDescription
+  );
+
   ["dragenter", "dragover"].forEach(eventName => {
-    elements.dropZone.addEventListener(eventName, event => {
-      event.preventDefault();
-      event.stopPropagation();
+    elements.dropZone.addEventListener(
+      eventName,
+      event => {
+        event.preventDefault();
+        event.stopPropagation();
 
-      elements.dropZone.classList.add("dragging");
-    });
+        elements.dropZone.classList.add(
+          "dragging"
+        );
+      }
+    );
   });
 
-  ["dragleave", "dragend", "drop"].forEach(eventName => {
-    elements.dropZone.addEventListener(eventName, event => {
-      event.preventDefault();
-      event.stopPropagation();
+  ["dragleave", "dragend", "drop"].forEach(
+    eventName => {
+      elements.dropZone.addEventListener(
+        eventName,
+        event => {
+          event.preventDefault();
+          event.stopPropagation();
 
-      elements.dropZone.classList.remove("dragging");
-    });
-  });
+          elements.dropZone.classList.remove(
+            "dragging"
+          );
+        }
+      );
+    }
+  );
 
-  elements.dropZone.addEventListener("drop", event => {
-    safelyAddFiles(event.dataTransfer.files);
-  });
+  elements.dropZone.addEventListener(
+    "drop",
+    event => {
+      safelyAddFiles(
+        event.dataTransfer.files
+      );
+    }
+  );
+
+  /* =====================================================
+     STARTUP
+     ===================================================== */
 
   if (typeof JSZip === "undefined") {
     setStatus(
@@ -115,7 +171,23 @@ function initializeApp() {
     setStatus("Application ready.");
   }
 
+  updateModeDescription();
   renderPhotos();
+
+  /* =====================================================
+     MODE
+     ===================================================== */
+
+  function updateModeDescription() {
+    if (elements.fitOnePageMode.checked) {
+      elements.modeDescription.textContent =
+        "Fit-one-page mode: rows, columns, and image " +
+        "sizes will be calculated automatically.";
+    } else {
+      elements.modeDescription.textContent =
+        "Standard mode: maximum nine photos per page.";
+    }
+  }
 
   /* =====================================================
      PHOTO SELECTION
@@ -125,7 +197,10 @@ function initializeApp() {
     try {
       addFiles(fileList);
     } catch (error) {
-      console.error("Photo-selection error:", error);
+      console.error(
+        "Photo-selection error:",
+        error
+      );
 
       setStatus(
         `Photo selection failed: ${error.message}`,
@@ -135,10 +210,16 @@ function initializeApp() {
   }
 
   function addFiles(fileList) {
-    const files = Array.from(fileList || []);
+    const files = Array.from(
+      fileList || []
+    );
 
     if (files.length === 0) {
-      setStatus("No files were selected.", true);
+      setStatus(
+        "No files were selected.",
+        true
+      );
+
       return;
     }
 
@@ -149,13 +230,15 @@ function initializeApp() {
     ];
 
     const validFiles = files.filter(file => {
-      const validType = validMimeTypes.includes(
-        String(file.type).toLowerCase()
-      );
+      const validType =
+        validMimeTypes.includes(
+          String(file.type).toLowerCase()
+        );
 
-      const validExtension = /\.(jpg|jpeg|png)$/i.test(
-        file.name
-      );
+      const validExtension =
+        /\.(jpg|jpeg|png)$/i.test(
+          file.name
+        );
 
       return validType || validExtension;
     });
@@ -167,21 +250,22 @@ function initializeApp() {
       elements.photoInput.value = "";
 
       setStatus(
-        "No supported photos were selected. Use JPG, JPEG, or PNG files.",
+        "No supported photos were selected. " +
+        "Use JPG, JPEG, or PNG files.",
         true
       );
 
       return;
     }
 
-    let addedCount = 0;
     let duplicateCount = 0;
 
     for (const file of validFiles) {
       const duplicate = photos.some(photo =>
         photo.file.name === file.name &&
         photo.file.size === file.size &&
-        photo.file.lastModified === file.lastModified
+        photo.file.lastModified ===
+          file.lastModified
       );
 
       if (duplicate) {
@@ -192,32 +276,28 @@ function initializeApp() {
       photos.push({
         id: createId(),
         file,
-        caption: removeFileExtension(file.name),
-        previewUrl: URL.createObjectURL(file)
+        caption:
+          removeFileExtension(file.name),
+        previewUrl:
+          URL.createObjectURL(file)
       });
-
-      addedCount += 1;
     }
 
     elements.photoInput.value = "";
 
     renderPhotos();
 
-    let message = `${photos.length} photo(s) selected.`;
+    let message =
+      `${photos.length} photo(s) selected.`;
 
     if (duplicateCount > 0) {
       message +=
-        ` ${duplicateCount} duplicate file(s) were ignored.`;
+        ` ${duplicateCount} duplicate file(s) ignored.`;
     }
 
     if (rejectedCount > 0) {
       message +=
-        ` ${rejectedCount} unsupported file(s) were ignored.`;
-    }
-
-    if (addedCount === 0 && duplicateCount > 0) {
-      message =
-        "The selected photos were already in the basket.";
+        ` ${rejectedCount} unsupported file(s) ignored.`;
     }
 
     setStatus(message);
@@ -226,7 +306,8 @@ function initializeApp() {
   function createId() {
     if (
       window.crypto &&
-      typeof window.crypto.randomUUID === "function"
+      typeof window.crypto.randomUUID ===
+        "function"
     ) {
       return window.crypto.randomUUID();
     }
@@ -239,7 +320,10 @@ function initializeApp() {
   }
 
   function removeFileExtension(filename) {
-    return String(filename).replace(/\.[^.]+$/, "");
+    return String(filename).replace(
+      /\.[^.]+$/,
+      ""
+    );
   }
 
   /* =====================================================
@@ -248,7 +332,9 @@ function initializeApp() {
 
   function clearPhotos() {
     photos.forEach(photo => {
-      URL.revokeObjectURL(photo.previewUrl);
+      URL.revokeObjectURL(
+        photo.previewUrl
+      );
     });
 
     photos = [];
@@ -276,7 +362,8 @@ function initializeApp() {
   }
 
   function movePhoto(index, direction) {
-    const targetIndex = index + direction;
+    const targetIndex =
+      index + direction;
 
     if (
       targetIndex < 0 ||
@@ -307,11 +394,15 @@ function initializeApp() {
       const emptyState =
         document.createElement("p");
 
-      emptyState.className = "empty-state";
+      emptyState.className =
+        "empty-state";
+
       emptyState.textContent =
         "No photos selected yet.";
 
-      elements.previewGrid.append(emptyState);
+      elements.previewGrid.append(
+        emptyState
+      );
 
       return;
     }
@@ -326,6 +417,7 @@ function initializeApp() {
         document.createElement("img");
 
       image.src = photo.previewUrl;
+
       image.alt =
         `Selected photo ${index + 1}`;
 
@@ -353,6 +445,7 @@ function initializeApp() {
         document.createElement("input");
 
       captionInput.type = "text";
+
       captionInput.placeholder =
         "Photo caption";
 
@@ -419,7 +512,9 @@ function initializeApp() {
         body
       );
 
-      elements.previewGrid.append(card);
+      elements.previewGrid.append(
+        card
+      );
     });
   }
 
@@ -453,7 +548,7 @@ function initializeApp() {
   }
 
   /* =====================================================
-     WORD GENERATION
+     GENERATION
      ===================================================== */
 
   async function generateReport() {
@@ -465,6 +560,9 @@ function initializeApp() {
 
     const location =
       elements.locationInput.value.trim();
+
+    const fitOnePage =
+      elements.fitOnePageMode.checked;
 
     if (!templateFile) {
       setStatus(
@@ -511,9 +609,22 @@ function initializeApp() {
       return;
     }
 
+    if (
+      fitOnePage &&
+      photos.length > 30
+    ) {
+      setStatus(
+        "Fit-one-page mode supports a maximum of " +
+        "30 photos so the results remain readable.",
+        true
+      );
+
+      return;
+    }
+
     if (typeof JSZip === "undefined") {
       setStatus(
-        "JSZip is unavailable. Check the JSZip script in index.html.",
+        "JSZip is unavailable.",
         true
       );
 
@@ -531,7 +642,9 @@ function initializeApp() {
         await templateFile.arrayBuffer();
 
       const zip =
-        await JSZip.loadAsync(templateBytes);
+        await JSZip.loadAsync(
+          templateBytes
+        );
 
       const documentPath =
         "word/document.xml";
@@ -551,21 +664,13 @@ function initializeApp() {
       const contentTypesFile =
         zip.file(contentTypesPath);
 
-      if (!documentFile) {
+      if (
+        !documentFile ||
+        !relationshipsFile ||
+        !contentTypesFile
+      ) {
         throw new Error(
-          "The template does not contain word/document.xml."
-        );
-      }
-
-      if (!relationshipsFile) {
-        throw new Error(
-          "The template relationships file is missing."
-        );
-      }
-
-      if (!contentTypesFile) {
-        throw new Error(
-          "The template content-types file is missing."
+          "The selected file is not a valid Word template."
         );
       }
 
@@ -573,10 +678,14 @@ function initializeApp() {
         await documentFile.async("string");
 
       let relationshipsXml =
-        await relationshipsFile.async("string");
+        await relationshipsFile.async(
+          "string"
+        );
 
       let contentTypesXml =
-        await contentTypesFile.async("string");
+        await contentTypesFile.async(
+          "string"
+        );
 
       const formattedServiceDate =
         formatDate(serviceDate);
@@ -639,6 +748,7 @@ function initializeApp() {
           relationshipId,
           width: processedImage.width,
           height: processedImage.height,
+
           caption:
             photos[index].caption ||
             `Photo ${index + 1}`
@@ -654,7 +764,8 @@ function initializeApp() {
         createPhotoContentXml(
           imageRecords,
           formattedServiceDate,
-          location
+          location,
+          fitOnePage
         );
 
       documentXml =
@@ -692,9 +803,15 @@ function initializeApp() {
             "officedocument.wordprocessingml.document"
         });
 
+      const modeName =
+        fitOnePage
+          ? "One_Page"
+          : "Standard";
+
       const filename =
         `Photo_Record_${serviceDate}_` +
-        `${safeFilename(location)}.docx`;
+        `${safeFilename(location)}_` +
+        `${modeName}.docx`;
 
       downloadBlob(
         outputBlob,
@@ -706,7 +823,7 @@ function initializeApp() {
       );
     } catch (error) {
       console.error(
-        "Report-generation error:",
+        "Generation error:",
         error
       );
 
@@ -715,12 +832,13 @@ function initializeApp() {
         true
       );
     } finally {
-      elements.generateButton.disabled = false;
+      elements.generateButton.disabled =
+        false;
     }
   }
 
   /* =====================================================
-     PLACEHOLDER REPLACEMENT
+     PLACEHOLDERS
      ===================================================== */
 
   function replaceSimplePlaceholder(
@@ -760,18 +878,18 @@ function initializeApp() {
       )
     ) {
       throw new Error(
-        "The Word document XML could not be read."
+        "The Word document XML is invalid."
       );
     }
 
-    const namespace =
+    const wordNamespace =
       "http://schemas.openxmlformats.org/" +
       "wordprocessingml/2006/main";
 
     const textNodes =
       Array.from(
         xmlDocument.getElementsByTagNameNS(
-          namespace,
+          wordNamespace,
           "t"
         )
       );
@@ -805,7 +923,7 @@ function initializeApp() {
       !placeholderParagraph.parentNode
     ) {
       throw new Error(
-        "The photo-table placeholder paragraph could not be found."
+        "The photo placeholder paragraph was not found."
       );
     }
 
@@ -827,18 +945,19 @@ function initializeApp() {
       )
     ) {
       throw new Error(
-        "The generated photo layout XML is invalid."
+        "The generated photo XML is invalid."
       );
     }
 
     const generatedElements =
       Array.from(
-        fragmentDocument.documentElement.children
+        fragmentDocument.documentElement
+          .children
       );
 
     if (generatedElements.length === 0) {
       throw new Error(
-        "No photo tables were generated."
+        "No photo layout was generated."
       );
     }
 
@@ -846,14 +965,11 @@ function initializeApp() {
       placeholderParagraph.parentNode;
 
     generatedElements.forEach(element => {
-      const importedElement =
+      parent.insertBefore(
         xmlDocument.importNode(
           element,
           true
-        );
-
-      parent.insertBefore(
-        importedElement,
+        ),
         placeholderParagraph
       );
     });
@@ -863,9 +979,7 @@ function initializeApp() {
     );
 
     return new XMLSerializer()
-      .serializeToString(
-        xmlDocument
-      );
+      .serializeToString(xmlDocument);
   }
 
   /* =====================================================
@@ -911,7 +1025,7 @@ function initializeApp() {
 
     if (!context) {
       throw new Error(
-        "The browser could not create the image canvas."
+        "The image-processing canvas is unavailable."
       );
     }
 
@@ -935,9 +1049,9 @@ function initializeApp() {
     const blob =
       await new Promise((resolve, reject) => {
         canvas.toBlob(
-          generatedBlob => {
-            if (generatedBlob) {
-              resolve(generatedBlob);
+          result => {
+            if (result) {
+              resolve(result);
             } else {
               reject(
                 new Error(
@@ -963,21 +1077,16 @@ function initializeApp() {
       const image =
         new Image();
 
-      const objectUrl =
+      const url =
         URL.createObjectURL(file);
 
       image.onload = () => {
-        URL.revokeObjectURL(
-          objectUrl
-        );
-
+        URL.revokeObjectURL(url);
         resolve(image);
       };
 
       image.onerror = () => {
-        URL.revokeObjectURL(
-          objectUrl
-        );
+        URL.revokeObjectURL(url);
 
         reject(
           new Error(
@@ -986,34 +1095,44 @@ function initializeApp() {
         );
       };
 
-      image.src = objectUrl;
+      image.src = url;
     });
   }
 
   /* =====================================================
-     PHOTO PAGE CREATION
+     MODE ROUTING
      ===================================================== */
 
   function createPhotoContentXml(
     imageRecords,
     serviceDate,
+    location,
+    fitOnePage
+  ) {
+    if (fitOnePage) {
+      return createFitOnePageTable(
+        imageRecords
+      );
+    }
+
+    return createStandardPhotoPages(
+      imageRecords,
+      serviceDate,
+      location
+    );
+  }
+
+  /* =====================================================
+     STANDARD MODE
+     ===================================================== */
+
+  function createStandardPhotoPages(
+    imageRecords,
+    serviceDate,
     location
   ) {
-    /*
-     * 1–8 photos:
-     * Use one centred two-column table.
-     *
-     * 9 photos:
-     * Use one centred three-column table.
-     *
-     * More than 9:
-     * Maximum nine photos per page.
-     * Every new page repeats the Supporting Photos
-     * heading, date, location, and spacing.
-     */
-
     if (imageRecords.length <= 8) {
-      return createSinglePhotoTable(
+      return createStandardTable(
         imageRecords,
         2,
         0
@@ -1021,26 +1140,20 @@ function initializeApp() {
     }
 
     const photosPerPage = 9;
-    const columnsPerRow = 3;
     const fragments = [];
 
     for (
-      let pageStart = 0;
-      pageStart < imageRecords.length;
-      pageStart += photosPerPage
+      let start = 0;
+      start < imageRecords.length;
+      start += photosPerPage
     ) {
       const pagePhotos =
         imageRecords.slice(
-          pageStart,
-          pageStart + photosPerPage
+          start,
+          start + photosPerPage
         );
 
-      /*
-       * The first page already has the heading,
-       * date, and location in the Word template.
-       */
-
-      if (pageStart > 0) {
+      if (start > 0) {
         fragments.push(
           createPageBreakXml()
         );
@@ -1054,10 +1167,10 @@ function initializeApp() {
       }
 
       fragments.push(
-        createSinglePhotoTable(
+        createStandardTable(
           pagePhotos,
-          columnsPerRow,
-          pageStart
+          3,
+          start
         )
       );
     }
@@ -1068,13 +1181,6 @@ function initializeApp() {
   function createPageBreakXml() {
     return `
       <w:p>
-        <w:pPr>
-          <w:spacing
-            w:before="0"
-            w:after="0"
-          />
-        </w:pPr>
-
         <w:r>
           <w:br w:type="page"/>
         </w:r>
@@ -1087,7 +1193,6 @@ function initializeApp() {
     location
   ) {
     return `
-      <!-- Supporting Photos heading -->
       <w:p>
         <w:pPr>
           <w:spacing
@@ -1106,7 +1211,6 @@ function initializeApp() {
         </w:r>
       </w:p>
 
-      <!-- Service date -->
       <w:p>
         <w:pPr>
           <w:spacing
@@ -1126,12 +1230,11 @@ function initializeApp() {
         </w:r>
       </w:p>
 
-      <!-- Location -->
       <w:p>
         <w:pPr>
           <w:spacing
             w:before="0"
-            w:after="180"
+            w:after="240"
           />
         </w:pPr>
 
@@ -1145,37 +1248,19 @@ function initializeApp() {
           )}</w:t>
         </w:r>
       </w:p>
-
-      <!-- Additional gap before the photo table -->
-      <w:p>
-        <w:pPr>
-          <w:spacing
-            w:before="0"
-            w:after="100"
-          />
-        </w:pPr>
-
-        <w:r>
-          <w:t xml:space="preserve"> </w:t>
-        </w:r>
-      </w:p>
     `;
   }
 
-  /* =====================================================
-     PHOTO TABLE CREATION
-     ===================================================== */
-
-  function createSinglePhotoTable(
+  function createStandardTable(
     imageRecords,
-    columnsPerRow,
-    startingIndex = 0
+    columns,
+    startingIndex
   ) {
     const tableWidth = 8600;
 
     const cellWidth =
       Math.floor(
-        tableWidth / columnsPerRow
+        tableWidth / columns
       );
 
     const rows = [];
@@ -1183,34 +1268,48 @@ function initializeApp() {
     for (
       let index = 0;
       index < imageRecords.length;
-      index += columnsPerRow
+      index += columns
     ) {
       const cells = [];
 
       for (
         let column = 0;
-        column < columnsPerRow;
+        column < columns;
         column += 1
       ) {
-        const localPhotoIndex =
+        const localIndex =
           index + column;
 
         const photo =
-          imageRecords[localPhotoIndex];
+          imageRecords[localIndex];
 
         if (photo) {
-          const actualPhotoNumber =
-            startingIndex +
-            localPhotoIndex +
-            1;
-
           cells.push(
-            createPhotoCellXml(
-              photo,
-              actualPhotoNumber,
+            createPhotoCellXml({
+              imageRecord: photo,
+
+              imageNumber:
+                startingIndex +
+                localIndex +
+                1,
+
               cellWidth,
-              columnsPerRow
-            )
+
+              maximumWidthEmu:
+                columns === 3
+                  ? 1630000
+                  : 2550000,
+
+              maximumHeightEmu:
+                columns === 3
+                  ? 1510000
+                  : 2150000,
+
+              captionFontSize:
+                columns === 3
+                  ? 16
+                  : 18
+            })
           );
         } else {
           cells.push(
@@ -1224,7 +1323,6 @@ function initializeApp() {
       rows.push(`
         <w:tr>
           <w:trPr>
-            <!-- Prevent a photo row splitting -->
             <w:cantSplit/>
           </w:trPr>
 
@@ -1233,11 +1331,252 @@ function initializeApp() {
       `);
     }
 
+    return createTableXml({
+      tableWidth,
+      columns,
+      cellWidth,
+      rows,
+      exactRowHeight: null
+    });
+  }
+
+  /* =====================================================
+     FIT ONE PAGE MODE
+     ===================================================== */
+
+  function calculateFitLayout(
+    photoCount
+  ) {
+    const tableWidth = 8600;
+
+    /*
+     * Approximate vertical space remaining after:
+     *
+     * Supporting Photos
+     * Service date
+     * Location
+     * Gap
+     * Footer-safe area
+     */
+
+    const availableHeight = 7600;
+
+    const maximumColumns =
+      Math.min(photoCount, 6);
+
+    let bestLayout = null;
+
+    for (
+      let columns = 1;
+      columns <= maximumColumns;
+      columns += 1
+    ) {
+      const rows =
+        Math.ceil(
+          photoCount / columns
+        );
+
+      const cellWidth =
+        Math.floor(
+          tableWidth / columns
+        );
+
+      const rowHeight =
+        Math.floor(
+          availableHeight / rows
+        );
+
+      /*
+       * Reserve space for:
+       *
+       * Caption
+       * Borders
+       * Cell padding
+       */
+
+      const usableWidth =
+        cellWidth - 220;
+
+      const usableHeight =
+        rowHeight - 450;
+
+      if (
+        usableWidth <= 0 ||
+        usableHeight <= 0
+      ) {
+        continue;
+      }
+
+      /*
+       * Score based on a 4:3 image.
+       */
+
+      const heightFromWidth =
+        usableWidth * 0.75;
+
+      const photoHeight =
+        Math.min(
+          usableHeight,
+          heightFromWidth
+        );
+
+      const photoWidth =
+        Math.min(
+          usableWidth,
+          photoHeight / 0.75
+        );
+
+      const score =
+        photoWidth * photoHeight;
+
+      if (
+        !bestLayout ||
+        score > bestLayout.score
+      ) {
+        bestLayout = {
+          columns,
+          rows,
+          cellWidth,
+          rowHeight,
+          photoWidth,
+          photoHeight,
+          score
+        };
+      }
+    }
+
+    if (!bestLayout) {
+      throw new Error(
+        "A one-page layout could not be calculated."
+      );
+    }
+
+    return bestLayout;
+  }
+
+  function createFitOnePageTable(
+    imageRecords
+  ) {
+    const tableWidth = 8600;
+
+    const layout =
+      calculateFitLayout(
+        imageRecords.length
+      );
+
+    const {
+      columns,
+      cellWidth,
+      rowHeight,
+      photoWidth,
+      photoHeight
+    } = layout;
+
+    /*
+     * One twip equals approximately 635 EMU.
+     */
+
+    const maximumWidthEmu =
+      Math.max(
+        100000,
+        Math.floor(photoWidth * 635)
+      );
+
+    const maximumHeightEmu =
+      Math.max(
+        100000,
+        Math.floor(photoHeight * 635)
+      );
+
+    let captionFontSize = 18;
+
+    if (columns === 3) {
+      captionFontSize = 16;
+    } else if (columns === 4) {
+      captionFontSize = 14;
+    } else if (columns >= 5) {
+      captionFontSize = 12;
+    }
+
+    const rows = [];
+
+    for (
+      let index = 0;
+      index < imageRecords.length;
+      index += columns
+    ) {
+      const cells = [];
+
+      for (
+        let column = 0;
+        column < columns;
+        column += 1
+      ) {
+        const photoIndex =
+          index + column;
+
+        const photo =
+          imageRecords[photoIndex];
+
+        if (photo) {
+          cells.push(
+            createPhotoCellXml({
+              imageRecord: photo,
+              imageNumber:
+                photoIndex + 1,
+              cellWidth,
+              maximumWidthEmu,
+              maximumHeightEmu,
+              captionFontSize
+            })
+          );
+        } else {
+          cells.push(
+            createEmptyCellXml(
+              cellWidth
+            )
+          );
+        }
+      }
+
+      rows.push(`
+        <w:tr>
+          <w:trPr>
+            <w:cantSplit/>
+
+            <w:trHeight
+              w:val="${rowHeight}"
+              w:hRule="exact"
+            />
+          </w:trPr>
+
+          ${cells.join("")}
+        </w:tr>
+      `);
+    }
+
+    return createTableXml({
+      tableWidth,
+      columns,
+      cellWidth,
+      rows,
+      exactRowHeight: rowHeight
+    });
+  }
+
+  /* =====================================================
+     SHARED TABLE GENERATOR
+     ===================================================== */
+
+  function createTableXml({
+    tableWidth,
+    columns,
+    cellWidth,
+    rows
+  }) {
     const gridColumns =
       Array.from(
-        {
-          length: columnsPerRow
-        },
+        { length: columns },
         () =>
           `<w:gridCol w:w="${cellWidth}"/>`
       ).join("");
@@ -1250,13 +1589,10 @@ function initializeApp() {
             w:type="dxa"
           />
 
-          <!-- Fixed-width columns -->
           <w:tblLayout w:type="fixed"/>
 
-          <!-- Centre the table -->
           <w:jc w:val="center"/>
 
-          <!-- No inherited indentation -->
           <w:tblInd
             w:w="0"
             w:type="dxa"
@@ -1264,22 +1600,22 @@ function initializeApp() {
 
           <w:tblCellMar>
             <w:top
-              w:w="60"
+              w:w="40"
               w:type="dxa"
             />
 
             <w:left
-              w:w="80"
+              w:w="50"
               w:type="dxa"
             />
 
             <w:bottom
-              w:w="60"
+              w:w="40"
               w:type="dxa"
             />
 
             <w:right
-              w:w="80"
+              w:w="50"
               w:type="dxa"
             />
           </w:tblCellMar>
@@ -1332,27 +1668,14 @@ function initializeApp() {
     `;
   }
 
-  function createPhotoCellXml(
+  function createPhotoCellXml({
     imageRecord,
     imageNumber,
     cellWidth,
-    columnsPerRow
-  ) {
-    /*
-     * Two-column tables use larger photos.
-     * Three-column tables use smaller photos.
-     */
-
-    const maximumWidthEmu =
-      columnsPerRow === 3
-        ? 1630000
-        : 2550000;
-
-    const maximumHeightEmu =
-      columnsPerRow === 3
-        ? 1510000
-        : 2150000;
-
+    maximumWidthEmu,
+    maximumHeightEmu,
+    captionFontSize
+  }) {
     const widthRatio =
       maximumWidthEmu /
       imageRecord.width;
@@ -1361,29 +1684,33 @@ function initializeApp() {
       maximumHeightEmu /
       imageRecord.height;
 
-    const scale = Math.min(
-      widthRatio,
-      heightRatio
-    );
+    const scale =
+      Math.min(
+        widthRatio,
+        heightRatio
+      );
 
-    const cx = Math.round(
-      imageRecord.width * scale
-    );
+    const cx =
+      Math.max(
+        1,
+        Math.round(
+          imageRecord.width * scale
+        )
+      );
 
-    const cy = Math.round(
-      imageRecord.height * scale
-    );
+    const cy =
+      Math.max(
+        1,
+        Math.round(
+          imageRecord.height * scale
+        )
+      );
 
     const drawingId =
       1000 + imageNumber;
 
     const pictureId =
       2000 + imageNumber;
-
-    const captionFontSize =
-      columnsPerRow === 3
-        ? 16
-        : 18;
 
     return `
       <w:tc>
@@ -1402,7 +1729,7 @@ function initializeApp() {
 
             <w:spacing
               w:before="0"
-              w:after="30"
+              w:after="10"
             />
           </w:pPr>
 
@@ -1505,7 +1832,9 @@ function initializeApp() {
     `;
   }
 
-  function createEmptyCellXml(cellWidth) {
+  function createEmptyCellXml(
+    cellWidth
+  ) {
     return `
       <w:tc>
         <w:tcPr>
@@ -1517,11 +1846,7 @@ function initializeApp() {
           <w:vAlign w:val="center"/>
         </w:tcPr>
 
-        <w:p>
-          <w:pPr>
-            <w:jc w:val="center"/>
-          </w:pPr>
-        </w:p>
+        <w:p/>
       </w:tc>
     `;
   }
@@ -1552,14 +1877,6 @@ function initializeApp() {
     relationshipId,
     mediaName
   ) {
-    const relationship = `
-      <Relationship
-        Id="${relationshipId}"
-        Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
-        Target="media/${mediaName}"
-      />
-    `;
-
     if (
       !relationshipsXml.includes(
         "</Relationships>"
@@ -1569,6 +1886,14 @@ function initializeApp() {
         "The Word relationships file is invalid."
       );
     }
+
+    const relationship = `
+      <Relationship
+        Id="${relationshipId}"
+        Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
+        Target="media/${mediaName}"
+      />
+    `;
 
     return relationshipsXml.replace(
       "</Relationships>",
@@ -1580,9 +1905,8 @@ function initializeApp() {
     contentTypesXml
   ) {
     if (
-      /<Default[^>]+Extension="jpg"[^>]*>/i.test(
-        contentTypesXml
-      )
+      /<Default[^>]+Extension="jpg"[^>]*>/i
+        .test(contentTypesXml)
     ) {
       return contentTypesXml;
     }
@@ -1636,12 +1960,24 @@ function initializeApp() {
 
   function safeFilename(value) {
     return String(value)
-      .replace(/[<>:"/\\|?*]+/g, "_")
-      .replace(/\s+/g, "_")
-      .replace(/^_+|_+$/g, "");
+      .replace(
+        /[<>:"/\\|?*]+/g,
+        "_"
+      )
+      .replace(
+        /\s+/g,
+        "_"
+      )
+      .replace(
+        /^_+|_+$/g,
+        ""
+      );
   }
 
-  function downloadBlob(blob, filename) {
+  function downloadBlob(
+    blob,
+    filename
+  ) {
     const url =
       URL.createObjectURL(blob);
 
