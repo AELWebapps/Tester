@@ -2,204 +2,752 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
   <title>Photo Record Generator</title>
+
   <style>
     :root {
       color-scheme: light;
-      font-family: Inter, "Segoe UI", sans-serif;
+
+      font-family:
+        Inter,
+        "Segoe UI",
+        Arial,
+        sans-serif;
+
       background: #f4f7fb;
       color: #263548;
     }
-    
-    * { box-sizing: border-box; }
-    
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: linear-gradient(145deg, #eef4fb, #ffffff);
+
+    * {
+      box-sizing: border-box;
     }
-    
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+
+      background:
+        linear-gradient(
+          145deg,
+          #eef4fb,
+          #ffffff
+        );
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
     .app-shell {
-      width: min(1100px, calc(100% - 32px));
+      width: min(
+        1100px,
+        calc(100% - 32px)
+      );
+
       margin: 0 auto;
       padding: 48px 0 72px;
     }
-    
-    header { margin-bottom: 28px; }
-    h1, h2 { color: #102a43; }
-    h1 { margin: 4px 0 12px; font‐size: clamp(2rem, 5vw, 3.5rem); }
-    h2 { margin: 2px 0 0; }
-    
+
+    .page-header {
+      margin-bottom: 28px;
+    }
+
     .eyebrow {
       margin: 0;
+
       color: #1570a6;
-      font‐size: .78rem;
+
+      font-size: 0.78rem;
       font-weight: 800;
-      letter-spacing: .12em;
+
+      letter-spacing: 0.12em;
       text-transform: uppercase;
     }
-    
+
+    h1,
+    h2 {
+      color: #102a43;
+    }
+
+    h1 {
+      margin: 4px 0 12px;
+
+      font-size:
+        clamp(
+          2rem,
+          5vw,
+          3.5rem
+        );
+    }
+
+    h2 {
+      margin: 2px 0 0;
+    }
+
+    .intro {
+      max-width: 780px;
+      margin-bottom: 0;
+
+      color: #526b82;
+      line-height: 1.6;
+    }
+
     .panel {
       margin-top: 20px;
       padding: 24px;
+
       border: 1px solid #cad7e3;
-      border‐radius: 16px;
-      background: rgba(255, 255, 255, .94);
-      box-shadow: 0 14px 38px rgba(23, 54, 83, .08);
+      border-radius: 16px;
+
+      background:
+        rgba(
+          255,
+          255,
+          255,
+          0.94
+        );
+
+      box-shadow:
+        0 14px 38px
+        rgba(
+          23,
+          54,
+          83,
+          0.08
+        );
     }
-    
+
     label {
       display: grid;
       gap: 8px;
+
       font-weight: 700;
     }
-    
-    input {
+
+    input[type="text"],
+    input[type="date"],
+    input[type="file"] {
       width: 100%;
       padding: 12px 14px;
+
       border: 1px solid #aebfd0;
-      border‐radius: 9px;
-      font: inherit;
+      border-radius: 9px;
+
+      background: #ffffff;
+      color: #263548;
     }
-    
+
+    input:focus-visible,
+    button:focus-visible {
+      outline: 3px solid
+        rgba(
+          21,
+          112,
+          166,
+          0.25
+        );
+
+      outline-offset: 2px;
+    }
+
     .field-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+
+      grid-template-columns:
+        repeat(
+          2,
+          minmax(0, 1fr)
+        );
+
       gap: 18px;
       margin-top: 18px;
     }
-    
-    .drop-zone {
-      place-items: center;
-      min-height: 170px;
+
+    /*
+     * LAYOUT MODE SWITCH
+     */
+
+    .mode-panel {
       margin-top: 22px;
-      border: 2px dashed #1570a6;
-      border‐radius: 14px;
+      padding: 16px;
+
+      border: 1px solid #b7d7ea;
+      border-radius: 12px;
+
       background: #eef8fd;
-      text-align: center;
+    }
+
+    .mode-switch {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
       cursor: pointer;
     }
-    
-    .drop-zone.dragging { background: #d9f0fb; }
-    .drop-zone input { max-width: 330px; }
-    
-    .section-heading,
-    .actions,
+
+    .mode-switch input {
+      width: 22px;
+      height: 22px;
+      margin: 0;
+
+      accent-color: #1570a6;
+      cursor: pointer;
+    }
+
+    .mode-switch span {
+      color: #102a43;
+      font-weight: 800;
+    }
+
+    #modeDescription {
+      margin: 8px 0 0 34px;
+
+      color: #60758a;
+
+      font-size: 0.92rem;
+      font-weight: 500;
+      line-height: 1.45;
+    }
+
+    /*
+     * DROP ZONE
+     */
+
+    .drop-zone {
+      display: grid;
+      place-items: center;
+
+      min-height: 180px;
+      margin-top: 22px;
+      padding: 24px;
+
+      border: 2px dashed #1570a6;
+      border-radius: 14px;
+
+      background: #eef8fd;
+      text-align: center;
+
+      cursor: pointer;
+
+      transition:
+        background-color 150ms ease,
+        border-color 150ms ease,
+        transform 150ms ease;
+    }
+
+    .drop-zone:hover {
+      background: #e1f3fc;
+    }
+
+    .drop-zone.dragging {
+      border-color: #0c527d;
+      background: #d1ecf9;
+
+      transform:
+        translateY(-2px);
+    }
+
+    .drop-zone strong {
+      color: #102a43;
+      font-size: 1.15rem;
+    }
+
+    .drop-zone span {
+      color: #60758a;
+      font-weight: 500;
+    }
+
+    .drop-zone input {
+      max-width: 360px;
+      margin-top: 8px;
+    }
+
+    /*
+     * PHOTO SELECTION AREA
+     */
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    #photoCount {
+      display: inline-flex;
+      align-items: center;
+
+      min-height: 34px;
+      padding: 6px 12px;
+
+      border-radius: 999px;
+
+      background: #e6f3fa;
+      color: #0c527d;
+
+      font-size: 0.9rem;
+      font-weight: 800;
+    }
+
+    .preview-grid {
+      display: grid;
+
+      grid-template-columns:
+        repeat(
+          auto-fill,
+          minmax(210px, 1fr)
+        );
+
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .photo-card {
+      overflow: hidden;
+
+      border: 1px solid #cad7e3;
+      border-radius: 12px;
+
+      background: #ffffff;
+
+      box-shadow:
+        0 8px 22px
+        rgba(
+          23,
+          54,
+          83,
+          0.07
+        );
+    }
+
+    .photo-card img {
+      display: block;
+
+      width: 100%;
+      aspect-ratio: 4 / 3;
+
+      object-fit: contain;
+
+      background: #e8eef5;
+    }
+
+    .photo-body {
+      padding: 12px;
+    }
+
+    .photo-body strong {
+      display: block;
+      color: #102a43;
+    }
+
+    .photo-body p {
+      min-height: 34px;
+      margin: 6px 0;
+
+      color: #60758a;
+
+      font-size: 0.85rem;
+      line-height: 1.3;
+    }
+
+    .photo-body input {
+      width: 100%;
+      margin: 8px 0 10px;
+      padding: 10px;
+
+      border: 1px solid #aebfd0;
+      border-radius: 8px;
+    }
+
     .photo-controls {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 8px;
     }
-    
-    .preview-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-      gap: 16px;
-      margin-top: 20px;
+
+    .empty-state {
+      grid-column: 1 / -1;
+
+      margin: 0;
+      padding: 36px 20px;
+
+      border: 1px dashed #cad7e3;
+      border-radius: 12px;
+
+      color: #60758a;
+      text-align: center;
     }
-    
-    .photo-card {
-      overflow: hidden;
-      border: 1px solid #cad7e3;
-      border‐radius: 12px;
-      background: #fff;
-    }
-    
-    .photo-card img {
-      display: block;
-      width: 100%;
-      aspect-ratio: 4 / 3;
-      object-fit: contain;
-      background: #e8eef5;
-    }
-    
-    .photo-body { padding: 12px; }
-    .photo-body input { margin: 8px 0 10px; }
-    .empty-state { color: #60758a; }
-    
+
+    /*
+     * BUTTONS
+     */
+
     button {
       border: 0;
-      border‐radius: 9px;
+      border-radius: 9px;
+
       padding: 12px 18px;
+
       background: #1570a6;
-      color: #fff;
-      font: inherit;
+      color: #ffffff;
+
       font-weight: 800;
       cursor: pointer;
+
+      transition:
+        background-color 150ms ease,
+        transform 150ms ease,
+        opacity 150ms ease;
     }
-    
-    button.secondary { background: #526b82; }
-    button.small { padding: 8px 10px; font‐size: .85rem; }
-    button.danger { background: #a83232; }
-    button:disabled { opacity: .45; cursor: not-allowed; }
-    
-    .actions { margin-top: 24px; justify-content: flex-end; }
-    .status { min-height: 24px; font-weight: 700; }
-    
+
+    button:hover:not(:disabled) {
+      background: #0f5e8e;
+
+      transform:
+        translateY(-1px);
+    }
+
+    button.secondary {
+      background: #526b82;
+    }
+
+    button.secondary:hover:not(:disabled) {
+      background: #40586d;
+    }
+
+    button.small {
+      padding: 8px 10px;
+      font-size: 0.85rem;
+    }
+
+    button.danger {
+      background: #a83232;
+    }
+
+    button.danger:hover:not(:disabled) {
+      background: #872626;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+
+      margin-top: 24px;
+    }
+
+    /*
+     * STATUS
+     */
+
+    .status {
+      min-height: 26px;
+      margin: 18px 0 0;
+
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    /*
+     * INFORMATION
+     */
+
+    .information {
+      margin-top: 28px;
+      padding: 18px 20px;
+
+      border-left: 4px solid #1570a6;
+      border-radius: 8px;
+
+      background: #edf7fc;
+    }
+
+    .information h2 {
+      margin: 0 0 8px;
+
+      font-size: 1.05rem;
+    }
+
+    .information ul {
+      margin: 0;
+      padding-left: 22px;
+
+      color: #526b82;
+      line-height: 1.6;
+    }
+
+    /*
+     * RESPONSIVE
+     */
+
     @media (max-width: 680px) {
-      .field-grid { grid-template-columns: 1fr; }
-      .actions { align-items: stretch; flex-direction: column; }
+      .app-shell {
+        width:
+          min(
+            100% - 20px,
+            1100px
+          );
+
+        padding-top: 28px;
+      }
+
+      .panel {
+        padding: 18px;
+      }
+
+      .field-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .actions {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .actions button {
+        width: 100%;
+      }
+
+      #modeDescription {
+        margin-left: 0;
+      }
     }
   </style>
 </head>
+
 <body>
   <main class="app-shell">
-    <header>
-      <p class="eyebrow">Browser-only prototype</p>
-      <h1>Photo Record Generator</h1>
-      <p>Select a Word template and several photos. The tool resizes the photos, creates two photos per row, and downloads a completed Word file.</p>
+    <header class="page-header">
+      <p class="eyebrow">
+        Browser-only Word generator
+      </p>
+
+      <h1>
+        Photo Record Generator
+      </h1>
+
+      <p class="intro">
+        Select a Word template and upload your
+        photographs. You can change their order,
+        edit captions, choose the layout mode, and
+        download the completed Word report.
+      </p>
     </header>
 
-    <section class="panel">
+    <!-- REPORT SETTINGS -->
+    <section
+      class="panel"
+      aria-labelledby="reportSettingsHeading"
+    >
+      <p class="eyebrow">
+        Step 1
+      </p>
+
+      <h2 id="reportSettingsHeading">
+        Report settings
+      </h2>
+
       <label>
         Word template
-        <input id="templateInput" type="file" accept=".docx">
+
+        <input
+          id="templateInput"
+          type="file"
+          accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        >
       </label>
 
       <div class="field-grid">
         <label>
           Service date
-          <input id="serviceDate" type="date">
+
+          <input
+            id="serviceDate"
+            type="date"
+          >
         </label>
 
         <label>
           Location
-          <input id="location" type="text" placeholder="Pump Room A">
+
+          <input
+            id="location"
+            type="text"
+            placeholder="For example: Pump Room A"
+            autocomplete="off"
+          >
         </label>
       </div>
 
-      <label class="drop-zone" id="dropZone">
-        <strong>Drop photos here</strong>
-        <span>or choose JPG / PNG files</span>
-        <input id="photoInput" type="file" accept="image/jpeg,image/png" multiple>
+      <!-- NEW LAYOUT MODE SWITCH -->
+      <div class="mode-panel">
+        <label class="mode-switch">
+          <input
+            id="fitOnePageMode"
+            type="checkbox"
+          >
+
+          <span>
+            Fit all photos on one page
+          </span>
+        </label>
+
+        <p id="modeDescription">
+          Standard mode: maximum nine photos
+          per page.
+        </p>
+      </div>
+    </section>
+
+    <!-- PHOTO UPLOAD -->
+    <section
+      class="panel"
+      aria-labelledby="photoUploadHeading"
+    >
+      <p class="eyebrow">
+        Step 2
+      </p>
+
+      <h2 id="photoUploadHeading">
+        Add photos
+      </h2>
+
+      <label
+        class="drop-zone"
+        id="dropZone"
+      >
+        <strong>
+          Drop photos here
+        </strong>
+
+        <span>
+          or choose JPG, JPEG, or PNG files
+        </span>
+
+        <input
+          id="photoInput"
+          type="file"
+          accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+          multiple
+        >
       </label>
     </section>
 
-    <section class="panel">
+    <!-- PHOTO REVIEW -->
+    <section
+      class="panel"
+      aria-labelledby="photoReviewHeading"
+    >
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Selection basket</p>
-          <h2>Photos</h2>
+          <p class="eyebrow">
+            Step 3
+          </p>
+
+          <h2 id="photoReviewHeading">
+            Review selected photos
+          </h2>
         </div>
-        <span id="photoCount">0 selected</span>
+
+        <span
+          id="photoCount"
+          aria-live="polite"
+        >
+          0 selected
+        </span>
       </div>
 
-      <div id="previewGrid" class="preview-grid">
-        <p class="empty-state">No photos selected yet.</p>
+      <div
+        id="previewGrid"
+        class="preview-grid"
+      >
+        <p class="empty-state">
+          No photos selected yet.
+        </p>
       </div>
     </section>
 
-    <section class="actions">
-      <button id="clearButton" class="secondary" type="button">Clear</button>
-      <button id="generateButton" type="button">Generate Word report</button>
+    <!-- ACTIONS -->
+    <section
+      class="actions"
+      aria-label="Report actions"
+    >
+      <button
+        id="clearButton"
+        class="secondary"
+        type="button"
+      >
+        Clear photos
+      </button>
+
+      <button
+        id="generateButton"
+        type="button"
+      >
+        Generate Word report
+      </button>
     </section>
 
-    <p id="status" class="status" role="status"></p>
+    <p
+      id="status"
+      class="status"
+      role="status"
+      aria-live="polite"
+    ></p>
+
+    <!-- MODE INFORMATION -->
+    <aside class="information">
+      <h2>
+        Layout modes
+      </h2>
+
+      <ul>
+        <li>
+          <strong>Standard mode:</strong>
+          up to nine photos are placed on each
+          photo page. Additional pages repeat the
+          Supporting Photos heading, service date,
+          and location.
+        </li>
+
+        <li>
+          <strong>Fit all photos on one page:</strong>
+          the app automatically calculates the rows,
+          columns, and photo sizes required to keep
+          the complete selection on one photo page.
+        </li>
+      </ul>
+    </aside>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <!--
+    JSZip must load before app.js.
+  -->
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"
+  ></script>
+
   <script src="./app.js"></script>
 </body>
 </html>
