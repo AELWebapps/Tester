@@ -114,10 +114,8 @@ Open the project and run `index.html` in your browser.
 
 ## 📄 Word Template
 
-```
 [Report, checklist and photo record.docx](https://github.com/user-attachments/files/34260173/Report.checklist.and.photo.record.docx)
 
-```
 
 ---
 
