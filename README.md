@@ -114,8 +114,9 @@ Open the project and run `index.html` in your browser.
 
 ## 📄 Word Template
 
-```text
-✅ .docx
+```
+[Report, checklist and photo record.docx](https://github.com/user-attachments/files/34260173/Report.checklist.and.photo.record.docx)
+
 ```
 
 ---
@@ -133,14 +134,6 @@ Instead of manually inserting and arranging photos in Word:
    ↓
 📄 Completed Word Report
 ```
-
----
-
-## 👨‍💻 Developer
-
-**Ian Cheung**
-
-🔧 Engineering • 💻 Digitalization • ⚙️ Automation
 
 ---
 
