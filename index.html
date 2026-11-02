@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-Hant-HK">
 <head>
   <meta charset="utf-8">
 
@@ -8,7 +8,7 @@
     content="width=device-width, initial-scale=1"
   >
 
-  <title>Photo Record Generator</title>
+  <title>相片紀錄產生器</title>
 
   <style>
     :root {
@@ -17,6 +17,8 @@
       font-family:
         Inter,
         "Segoe UI",
+        "Microsoft JhengHei",
+        "PingFang HK",
         Arial,
         sans-serif;
 
@@ -67,8 +69,7 @@
       font-size: 0.78rem;
       font-weight: 800;
 
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
+      letter-spacing: 0.08em;
     }
 
     h1,
@@ -171,7 +172,7 @@
     }
 
     /*
-     * LAYOUT MODE SWITCH
+     * 版面配置模式
      */
 
     .mode-panel {
@@ -217,7 +218,7 @@
     }
 
     /*
-     * DROP ZONE
+     * 相片拖放區
      */
 
     .drop-zone {
@@ -270,7 +271,7 @@
     }
 
     /*
-     * PHOTO SELECTION AREA
+     * 相片預覽區
      */
 
     .section-heading {
@@ -387,7 +388,7 @@
     }
 
     /*
-     * BUTTONS
+     * 按鈕
      */
 
     button {
@@ -452,7 +453,7 @@
     }
 
     /*
-     * STATUS
+     * 狀態訊息
      */
 
     .status {
@@ -464,7 +465,7 @@
     }
 
     /*
-     * INFORMATION
+     * 模式說明
      */
 
     .information {
@@ -492,7 +493,7 @@
     }
 
     /*
-     * RESPONSIVE
+     * 手機版面
      */
 
     @media (max-width: 680px) {
@@ -539,36 +540,35 @@
   <main class="app-shell">
     <header class="page-header">
       <p class="eyebrow">
-        Browser-only Word generator
+        瀏覽器版 Word 報告產生器
       </p>
 
       <h1>
-        Photo Record Generator
+        相片紀錄產生器
       </h1>
 
       <p class="intro">
-        Select a Word template and upload your
-        photographs. You can change their order,
-        edit captions, choose the layout mode, and
-        download the completed Word report.
+        選擇 Word 範本並上載相片。你可以調整相片次序、
+        編輯相片說明、選擇版面配置模式，然後下載完成的
+        Word 報告。
       </p>
     </header>
 
-    <!-- REPORT SETTINGS -->
+    <!-- 報告設定 -->
     <section
       class="panel"
       aria-labelledby="reportSettingsHeading"
     >
       <p class="eyebrow">
-        Step 1
+        步驟 1
       </p>
 
       <h2 id="reportSettingsHeading">
-        Report settings
+        報告設定
       </h2>
 
       <label>
-        Word template
+        Word 範本
 
         <input
           id="templateInput"
@@ -579,7 +579,7 @@
 
       <div class="field-grid">
         <label>
-          Service date
+          服務日期
 
           <input
             id="serviceDate"
@@ -588,18 +588,18 @@
         </label>
 
         <label>
-          Location
+          地點
 
           <input
             id="location"
             type="text"
-            placeholder="For example: Pump Room A"
+            placeholder="例如：泵房 A"
             autocomplete="off"
           >
         </label>
       </div>
 
-      <!-- NEW LAYOUT MODE SWITCH -->
+      <!-- 版面配置模式 -->
       <div class="mode-panel">
         <label class="mode-switch">
           <input
@@ -608,28 +608,27 @@
           >
 
           <span>
-            Fit all photos on one page
+            將所有相片置於同一頁
           </span>
         </label>
 
         <p id="modeDescription">
-          Standard mode: maximum nine photos
-          per page.
+          標準模式：每頁最多九張相片。
         </p>
       </div>
     </section>
 
-    <!-- PHOTO UPLOAD -->
+    <!-- 上載相片 -->
     <section
       class="panel"
       aria-labelledby="photoUploadHeading"
     >
       <p class="eyebrow">
-        Step 2
+        步驟 2
       </p>
 
       <h2 id="photoUploadHeading">
-        Add photos
+        加入相片
       </h2>
 
       <label
@@ -637,11 +636,11 @@
         id="dropZone"
       >
         <strong>
-          Drop photos here
+          將相片拖放到此處
         </strong>
 
         <span>
-          or choose JPG, JPEG, or PNG files
+          或選擇 JPG、JPEG 或 PNG 檔案
         </span>
 
         <input
@@ -653,7 +652,7 @@
       </label>
     </section>
 
-    <!-- PHOTO REVIEW -->
+    <!-- 檢視相片 -->
     <section
       class="panel"
       aria-labelledby="photoReviewHeading"
@@ -661,11 +660,11 @@
       <div class="section-heading">
         <div>
           <p class="eyebrow">
-            Step 3
+            步驟 3
           </p>
 
           <h2 id="photoReviewHeading">
-            Review selected photos
+            檢視已選相片
           </h2>
         </div>
 
@@ -673,7 +672,7 @@
           id="photoCount"
           aria-live="polite"
         >
-          0 selected
+          已選 0 張
         </span>
       </div>
 
@@ -682,29 +681,29 @@
         class="preview-grid"
       >
         <p class="empty-state">
-          No photos selected yet.
+          尚未選擇相片。
         </p>
       </div>
     </section>
 
-    <!-- ACTIONS -->
+    <!-- 操作按鈕 -->
     <section
       class="actions"
-      aria-label="Report actions"
+      aria-label="報告操作"
     >
       <button
         id="clearButton"
         class="secondary"
         type="button"
       >
-        Clear photos
+        清除相片
       </button>
 
       <button
         id="generateButton"
         type="button"
       >
-        Generate Word report
+        產生 Word 報告
       </button>
     </section>
 
@@ -715,35 +714,29 @@
       aria-live="polite"
     ></p>
 
-    <!-- MODE INFORMATION -->
+    <!-- 版面配置說明 -->
     <aside class="information">
       <h2>
-        Layout modes
+        版面配置模式
       </h2>
 
       <ul>
         <li>
-          <strong>Standard mode:</strong>
-          up to nine photos are placed on each
-          photo page. Additional pages repeat the
-          Supporting Photos heading, service date,
-          and location.
+          <strong>標準模式：</strong>
+          每個相片頁最多放置九張相片。如有更多相片，
+          新頁會重複顯示「支援相片」標題、服務日期及地點。
         </li>
 
         <li>
-          <strong>Fit all photos on one page:</strong>
-          the app automatically calculates the rows,
-          columns, and photo sizes required to keep
-          the complete selection on one photo page.
+          <strong>將所有相片置於同一頁：</strong>
+          應用程式會自動計算列數、欄數及相片尺寸，
+          將全部已選相片放在同一個相片頁面內。
         </li>
       </ul>
     </aside>
   </main>
 
-  <!--
-    JSZip must load before app.js.
-  -->
-
+  <!-- JSZip 必須在 app.js 之前載入。 -->
   <script
     src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"
   ></script>
