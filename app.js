@@ -1,0 +1,683 @@
+"use strict";
+
+/*
+ * PHOTO RECORD GENERATOR
+ * Required Word placeholders:
+ * {{SERVICE_DATE}}, {{LOCATION}}, {{PHOTO_TABLE}}
+ */
+
+document.addEventListener("DOMContentLoaded", initializeApp);
+
+function initializeApp() {
+  const elements = {
+    templateInput: document.querySelector("#templateInput"),
+    photoInput: document.querySelector("#photoInput"),
+    serviceDateInput: document.querySelector("#serviceDate"),
+    locationInput: document.querySelector("#location"),
+    fitOnePageMode: document.querySelector("#fitOnePageMode"),
+    modeDescription: document.querySelector("#modeDescription"),
+    previewGrid: document.querySelector("#previewGrid"),
+    photoCount: document.querySelector("#photoCount"),
+    dropZone: document.querySelector("#dropZone"),
+    clearButton: document.querySelector("#clearButton"),
+    generateButton: document.querySelector("#generateButton"),
+    status: document.querySelector("#status")
+  };
+
+  const missingElements = Object.entries(elements)
+    .filter(([, element]) => !element)
+    .map(([name]) => name);
+
+  if (missingElements.length > 0) {
+    console.error("Missing HTML elements:", missingElements);
+    alert("應用程式無法啟動，因為缺少以下 HTML 元素：\n\n" + missingElements.join("\n"));
+    return;
+  }
+
+  let photos = [];
+
+  elements.photoInput.addEventListener("change", (event) => safelyAddFiles(event.target.files));
+  elements.clearButton.addEventListener("click", clearPhotos);
+  elements.generateButton.addEventListener("click", generateReport);
+  elements.fitOnePageMode.addEventListener("change", updateModeDescription);
+
+  ["dragenter", "dragover"].forEach((eventName) => {
+    elements.dropZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      elements.dropZone.classList.add("dragging");
+    });
+  });
+
+  ["dragleave", "dragend", "drop"].forEach((eventName) => {
+    elements.dropZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      elements.dropZone.classList.remove("dragging");
+    });
+  });
+
+  elements.dropZone.addEventListener("drop", (event) => safelyAddFiles(event.dataTransfer.files));
+
+  if (typeof JSZip === "undefined") {
+    setStatus("JSZip 載入失敗，請檢查網路連線或 index.html 內的 JSZip script。", true);
+    elements.generateButton.disabled = true;
+  } else {
+    setStatus("應用程式已準備就緒。");
+  }
+
+  updateModeDescription();
+  renderPhotos();
+
+  function updateModeDescription() {
+    elements.modeDescription.textContent = elements.fitOnePageMode.checked
+      ? "單頁模式：系統會自動計算行數、欄數及相片尺寸。"
+      : "標準模式：每頁最多九張相片。";
+  }
+
+  function safelyAddFiles(fileList) {
+    try {
+      addFiles(fileList);
+    } catch (error) {
+      console.error("Photo-selection error:", error);
+      setStatus(`選擇相片失敗：${error.message}`, true);
+    }
+  }
+
+  function addFiles(fileList) {
+    const files = Array.from(fileList || []);
+    if (files.length === 0) {
+      setStatus("尚未選擇任何檔案。", true);
+      return;
+    }
+
+    const validFiles = files.filter((file) =>
+      ["image/jpeg", "image/jpg", "image/png"].includes(String(file.type).toLowerCase()) ||
+      /\.(jpg|jpeg|png)$/i.test(file.name)
+    );
+    const rejectedCount = files.length - validFiles.length;
+
+    if (validFiles.length === 0) {
+      elements.photoInput.value = "";
+      setStatus("沒有選擇支援的相片格式。請使用 JPG、JPEG 或 PNG 檔案。", true);
+      return;
+    }
+
+    let duplicateCount = 0;
+    for (const file of validFiles) {
+      const duplicate = photos.some((photo) =>
+        photo.file.name === file.name &&
+        photo.file.size === file.size &&
+        photo.file.lastModified === file.lastModified
+      );
+      if (duplicate) {
+        duplicateCount += 1;
+        continue;
+      }
+      photos.push({
+        id: createId(),
+        file,
+        caption: removeFileExtension(file.name),
+        previewUrl: URL.createObjectURL(file)
+      });
+    }
+
+    elements.photoInput.value = "";
+    renderPhotos();
+
+    let message = `已選擇 ${photos.length} 張相片。`;
+    if (duplicateCount > 0) message += ` 已略過 ${duplicateCount} 個重複檔案。`;
+    if (rejectedCount > 0) message += ` 已略過 ${rejectedCount} 個不支援的檔案。`;
+    setStatus(message);
+  }
+
+  function createId() {
+    if (window.crypto && typeof window.crypto.randomUUID === "function") {
+      return window.crypto.randomUUID();
+    }
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  function removeFileExtension(filename) {
+    return String(filename).replace(/\.[^.]+$/, "");
+  }
+
+  function clearPhotos() {
+    photos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
+    photos = [];
+    renderPhotos();
+    setStatus("已清除所有已選擇的相片。");
+  }
+
+  function removePhoto(index) {
+    if (!photos[index]) return;
+    URL.revokeObjectURL(photos[index].previewUrl);
+    photos.splice(index, 1);
+    renderPhotos();
+    setStatus(`已選擇 ${photos.length} 張相片。`);
+  }
+
+  function movePhoto(index, direction) {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= photos.length) return;
+    [photos[index], photos[targetIndex]] = [photos[targetIndex], photos[index]];
+    renderPhotos();
+    setStatus("相片次序已更新。");
+  }
+
+  function renderPhotos() {
+    elements.photoCount.textContent = `已選 ${photos.length} 張`;
+    elements.previewGrid.innerHTML = "";
+
+    if (photos.length === 0) {
+      const emptyState = document.createElement("p");
+      emptyState.className = "empty-state";
+      emptyState.textContent = "尚未選擇相片。";
+      elements.previewGrid.append(emptyState);
+      return;
+    }
+
+    photos.forEach((photo, index) => {
+      const card = document.createElement("article");
+      card.className = "photo-card";
+
+      const image = document.createElement("img");
+      image.src = photo.previewUrl;
+      image.alt = `已選擇的相片 ${index + 1}`;
+
+      const body = document.createElement("div");
+      body.className = "photo-body";
+
+      const title = document.createElement("strong");
+      title.textContent = `相片 ${index + 1}`;
+
+      const filename = document.createElement("p");
+      filename.textContent = photo.file.name;
+      filename.style.wordBreak = "break-word";
+
+      const captionInput = document.createElement("input");
+      captionInput.type = "text";
+      captionInput.placeholder = "相片說明";
+      captionInput.value = photo.caption;
+      captionInput.addEventListener("input", (event) => {
+        photo.caption = event.target.value;
+      });
+
+      const controls = document.createElement("div");
+      controls.className = "photo-controls";
+
+      const moveLeftButton = makeButton("←", "將相片向前移", () => movePhoto(index, -1));
+      moveLeftButton.disabled = index === 0;
+      const moveRightButton = makeButton("→", "將相片向後移", () => movePhoto(index, 1));
+      moveRightButton.disabled = index === photos.length - 1;
+      const removeButton = makeButton("移除", "移除相片", () => removePhoto(index), "danger");
+
+      controls.append(moveLeftButton, moveRightButton, removeButton);
+      body.append(title, filename, captionInput, controls);
+      card.append(image, body);
+      elements.previewGrid.append(card);
+    });
+  }
+
+  function makeButton(text, ariaLabel, clickHandler, extraClass = "") {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `small ${extraClass}`.trim();
+    button.textContent = text;
+    button.setAttribute("aria-label", ariaLabel);
+    button.addEventListener("click", clickHandler);
+    return button;
+  }
+
+  async function generateReport() {
+    const templateFile = elements.templateInput.files[0];
+    const serviceDate = elements.serviceDateInput.value;
+    const location = elements.locationInput.value.trim();
+    const fitOnePage = elements.fitOnePageMode.checked;
+
+    if (!templateFile) return setStatus("請先選擇 Word 範本。", true);
+    if (!/\.docx$/i.test(templateFile.name)) return setStatus("範本必須為 .docx 檔案。", true);
+    if (!serviceDate) return setStatus("請輸入服務日期。", true);
+    if (!location) return setStatus("請輸入地點。", true);
+    if (photos.length === 0) return setStatus("請至少選擇一張相片。", true);
+    if (fitOnePage && photos.length > 30) {
+      return setStatus("為確保相片清晰可讀，單頁模式最多支援 30 張相片。", true);
+    }
+    if (typeof JSZip === "undefined") return setStatus("JSZip 無法使用。", true);
+
+    elements.generateButton.disabled = true;
+
+    try {
+      setStatus(`正在準備 ${photos.length} 張相片...`);
+      const zip = await JSZip.loadAsync(await templateFile.arrayBuffer());
+      const documentPath = "word/document.xml";
+      const relationshipsPath = "word/_rels/document.xml.rels";
+      const contentTypesPath = "[Content_Types].xml";
+
+      const documentFile = zip.file(documentPath);
+      const relationshipsFile = zip.file(relationshipsPath);
+      const contentTypesFile = zip.file(contentTypesPath);
+      if (!documentFile || !relationshipsFile || !contentTypesFile) {
+        throw new Error("所選檔案不是有效的 Word 範本。");
+      }
+
+      let documentXml = await documentFile.async("string");
+      let relationshipsXml = await relationshipsFile.async("string");
+      let contentTypesXml = await contentTypesFile.async("string");
+      const formattedServiceDate = formatDate(serviceDate);
+
+      documentXml = replaceTextPlaceholder(documentXml, "{{SERVICE_DATE}}", formattedServiceDate);
+      documentXml = replaceTextPlaceholder(documentXml, "{{LOCATION}}", location);
+
+      const imageRecords = [];
+      for (let index = 0; index < photos.length; index += 1) {
+        setStatus(`正在處理第 ${index + 1} 張相片，共 ${photos.length} 張...`);
+        const processedImage = await normalizeImage(photos[index].file, 1400, 1000);
+        const mediaName = `photo_${index + 1}.jpg`;
+        const relationshipId = findAvailableRelationshipId(relationshipsXml, index);
+
+        zip.file(`word/media/${mediaName}`, processedImage.bytes);
+        relationshipsXml = addImageRelationship(relationshipsXml, relationshipId, mediaName);
+        imageRecords.push({
+          relationshipId,
+          width: processedImage.width,
+          height: processedImage.height,
+          caption: photos[index].caption.trim() || `相片 ${index + 1}`
+        });
+      }
+
+      contentTypesXml = ensureJpegContentType(contentTypesXml);
+      const generatedPhotoXml = createPhotoContentXml(
+        imageRecords,
+        formattedServiceDate,
+        location,
+        fitOnePage
+      );
+      documentXml = replaceBlockPlaceholder(documentXml, "{{PHOTO_TABLE}}", generatedPhotoXml);
+
+      zip.file(documentPath, documentXml);
+      zip.file(relationshipsPath, relationshipsXml);
+      zip.file(contentTypesPath, contentTypesXml);
+
+      setStatus("正在建立 Word 文件...");
+      const outputBlob = await zip.generateAsync({
+        type: "blob",
+        mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      });
+
+      const modeName = fitOnePage ? "One_Page" : "Standard";
+      const filename = `Photo_Record_${serviceDate}_${safeFilename(location)}_${modeName}.docx`;
+      downloadBlob(outputBlob, filename);
+      setStatus(`報告已成功產生：${filename}`);
+    } catch (error) {
+      console.error("Generation error:", error);
+      setStatus(`產生報告失敗：${error.message}`, true);
+    } finally {
+      elements.generateButton.disabled = false;
+    }
+  }
+
+  function parseWordXml(xml) {
+    const documentNode = new DOMParser().parseFromString(xml, "application/xml");
+    if (documentNode.getElementsByTagName("parsererror").length > 0) {
+      throw new Error("Word 文件的 XML 格式無效。");
+    }
+    return documentNode;
+  }
+
+  function findParagraphContaining(documentNode, placeholder) {
+    const wordNamespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+    const paragraphs = Array.from(documentNode.getElementsByTagNameNS(wordNamespace, "p"));
+    return paragraphs.find((paragraph) => paragraph.textContent.includes(placeholder));
+  }
+
+  // Supports placeholders split into several Word runs.
+  function replaceTextPlaceholder(xml, placeholder, replacement) {
+    const documentNode = parseWordXml(xml);
+    const paragraph = findParagraphContaining(documentNode, placeholder);
+    if (!paragraph) throw new Error(`Word 範本缺少 ${placeholder}。`);
+
+    const wordNamespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+    const textNodes = Array.from(paragraph.getElementsByTagNameNS(wordNamespace, "t"));
+    const combinedText = textNodes.map((node) => node.textContent).join("");
+    const replacedText = combinedText.replace(placeholder, replacement);
+    if (combinedText === replacedText) throw new Error(`Word 範本缺少 ${placeholder}。`);
+
+    textNodes[0].textContent = replacedText;
+    textNodes.slice(1).forEach((node) => { node.textContent = ""; });
+    return new XMLSerializer().serializeToString(documentNode);
+  }
+
+  function replaceBlockPlaceholder(xml, placeholder, generatedXml) {
+    const parser = new DOMParser();
+    const documentNode = parseWordXml(xml);
+    const placeholderParagraph = findParagraphContaining(documentNode, placeholder);
+    if (!placeholderParagraph || !placeholderParagraph.parentNode) {
+      throw new Error(`Word 範本缺少 ${placeholder}。`);
+    }
+
+    const fragmentDocument = parser.parseFromString(
+      `<root
+        xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+        xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+        xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+        xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+        xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
+      >${generatedXml}</root>`,
+      "application/xml"
+    );
+
+    if (fragmentDocument.getElementsByTagName("parsererror").length > 0) {
+      console.error(new XMLSerializer().serializeToString(fragmentDocument));
+      throw new Error("產生的相片 XML 格式無效。");
+    }
+
+    const generatedElements = Array.from(fragmentDocument.documentElement.children);
+    if (generatedElements.length === 0) throw new Error("未能產生相片版面。");
+
+    const parent = placeholderParagraph.parentNode;
+    generatedElements.forEach((element) => {
+      parent.insertBefore(documentNode.importNode(element, true), placeholderParagraph);
+    });
+    parent.removeChild(placeholderParagraph);
+    return new XMLSerializer().serializeToString(documentNode);
+  }
+
+  async function normalizeImage(file, maxWidth, maxHeight) {
+    const image = await loadImage(file);
+    const scale = Math.min(1, maxWidth / image.naturalWidth, maxHeight / image.naturalHeight);
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("無法使用圖片處理 Canvas。");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+    context.drawImage(image, 0, 0, width, height);
+
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (result) => result ? resolve(result) : reject(new Error(`無法處理 ${file.name}。`)),
+        "image/jpeg",
+        0.86
+      );
+    });
+    return { bytes: await blob.arrayBuffer(), width, height };
+  }
+
+  function loadImage(file) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      const url = URL.createObjectURL(file);
+      image.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(image);
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error(`無法讀取 ${file.name}。`));
+      };
+      image.src = url;
+    });
+  }
+
+  function createPhotoContentXml(imageRecords, serviceDate, location, fitOnePage) {
+    return fitOnePage
+      ? createFitOnePageTable(imageRecords)
+      : createStandardPhotoPages(imageRecords, serviceDate, location);
+  }
+
+  function createStandardPhotoPages(imageRecords, serviceDate, location) {
+    if (imageRecords.length <= 8) return createStandardTable(imageRecords, 2, 0);
+
+    const fragments = [];
+    for (let start = 0; start < imageRecords.length; start += 9) {
+      if (start > 0) {
+        fragments.push(createPageBreakXml());
+        fragments.push(createPhotoPageHeaderXml(serviceDate, location));
+      }
+      fragments.push(createStandardTable(imageRecords.slice(start, start + 9), 3, start));
+    }
+    return fragments.join("");
+  }
+
+  function createPageBreakXml() {
+    return `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;
+  }
+
+  function createPhotoPageHeaderXml(serviceDate, location) {
+    return `
+      <w:p><w:pPr><w:spacing w:before="0" w:after="60"/></w:pPr>
+        <w:r><w:rPr><w:b/><w:sz w:val="24"/></w:rPr><w:t>相片記錄：</w:t></w:r>
+      </w:p>
+      <w:p><w:pPr><w:spacing w:before="0" w:after="20"/></w:pPr>
+        <w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>${escapeXml(`服務日期：${serviceDate}`)}</w:t></w:r>
+      </w:p>
+      <w:p><w:pPr><w:spacing w:before="0" w:after="240"/></w:pPr>
+        <w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>${escapeXml(`地點：${location}`)}</w:t></w:r>
+      </w:p>`;
+  }
+
+  function createStandardTable(imageRecords, columns, startingIndex) {
+    const tableWidth = 8600;
+    const cellWidth = Math.floor(tableWidth / columns);
+    const rows = [];
+
+    for (let index = 0; index < imageRecords.length; index += columns) {
+      const cells = [];
+      for (let column = 0; column < columns; column += 1) {
+        const localIndex = index + column;
+        const photo = imageRecords[localIndex];
+        cells.push(photo ? createPhotoCellXml({
+          imageRecord: photo,
+          imageNumber: startingIndex + localIndex + 1,
+          cellWidth,
+          maximumWidthEmu: columns === 3 ? 1630000 : 2550000,
+          maximumHeightEmu: columns === 3 ? 1510000 : 2150000,
+          captionFontSize: columns === 3 ? 16 : 18
+        }) : createEmptyCellXml(cellWidth));
+      }
+      rows.push(`<w:tr><w:trPr><w:cantSplit/></w:trPr>${cells.join("")}</w:tr>`);
+    }
+    return createTableXml({ tableWidth, columns, cellWidth, rows });
+  }
+
+  function calculateFitLayout(photoCount) {
+    const tableWidth = 8600;
+    const availableHeight = 7600;
+    const maximumColumns = Math.min(photoCount, 6);
+    let bestLayout = null;
+
+    for (let columns = 1; columns <= maximumColumns; columns += 1) {
+      const rows = Math.ceil(photoCount / columns);
+      const cellWidth = Math.floor(tableWidth / columns);
+      const rowHeight = Math.floor(availableHeight / rows);
+      const usableWidth = cellWidth - 220;
+      const usableHeight = rowHeight - 450;
+      if (usableWidth <= 0 || usableHeight <= 0) continue;
+
+      const photoHeight = Math.min(usableHeight, usableWidth * 0.75);
+      const photoWidth = Math.min(usableWidth, photoHeight / 0.75);
+      const score = photoWidth * photoHeight;
+      if (!bestLayout || score > bestLayout.score) {
+        bestLayout = { columns, rows, cellWidth, rowHeight, photoWidth, photoHeight, score };
+      }
+    }
+    if (!bestLayout) throw new Error("無法計算適合單頁顯示的版面配置。");
+    return bestLayout;
+  }
+
+  function createFitOnePageTable(imageRecords) {
+    const tableWidth = 8600;
+    const layout = calculateFitLayout(imageRecords.length);
+    const { columns, cellWidth, rowHeight, photoWidth, photoHeight } = layout;
+    const maximumWidthEmu = Math.max(100000, Math.floor(photoWidth * 635));
+    const maximumHeightEmu = Math.max(100000, Math.floor(photoHeight * 635));
+    const captionFontSize = columns === 3 ? 16 : columns === 4 ? 14 : columns >= 5 ? 12 : 18;
+    const rows = [];
+
+    for (let index = 0; index < imageRecords.length; index += columns) {
+      const cells = [];
+      for (let column = 0; column < columns; column += 1) {
+        const photoIndex = index + column;
+        const photo = imageRecords[photoIndex];
+        cells.push(photo ? createPhotoCellXml({
+          imageRecord: photo,
+          imageNumber: photoIndex + 1,
+          cellWidth,
+          maximumWidthEmu,
+          maximumHeightEmu,
+          captionFontSize
+        }) : createEmptyCellXml(cellWidth));
+      }
+      rows.push(`<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="${rowHeight}" w:hRule="exact"/></w:trPr>${cells.join("")}</w:tr>`);
+    }
+    return createTableXml({ tableWidth, columns, cellWidth, rows });
+  }
+
+  function createTableXml({ tableWidth, columns, cellWidth, rows }) {
+    const gridColumns = Array.from({ length: columns }, () => `<w:gridCol w:w="${cellWidth}"/>`).join("");
+    return `
+      <w:tbl>
+        <w:tblPr>
+          <w:tblW w:w="${tableWidth}" w:type="dxa"/>
+          <w:tblLayout w:type="fixed"/><w:jc w:val="center"/><w:tblInd w:w="0" w:type="dxa"/>
+          <w:tblCellMar>
+            <w:top w:w="40" w:type="dxa"/><w:left w:w="50" w:type="dxa"/>
+            <w:bottom w:w="40" w:type="dxa"/><w:right w:w="50" w:type="dxa"/>
+          </w:tblCellMar>
+          <w:tblBorders>
+            <w:top w:val="single" w:sz="4" w:color="B7C4CE"/>
+            <w:left w:val="single" w:sz="4" w:color="B7C4CE"/>
+            <w:bottom w:val="single" w:sz="4" w:color="B7C4CE"/>
+            <w:right w:val="single" w:sz="4" w:color="B7C4CE"/>
+            <w:insideH w:val="single" w:sz="4" w:color="B7C4CE"/>
+            <w:insideV w:val="single" w:sz="4" w:color="B7C4CE"/>
+          </w:tblBorders>
+        </w:tblPr>
+        <w:tblGrid>${gridColumns}</w:tblGrid>
+        ${rows.join("")}
+      </w:tbl>`;
+  }
+
+  function createPhotoCellXml({
+    imageRecord,
+    imageNumber,
+    cellWidth,
+    maximumWidthEmu,
+    maximumHeightEmu,
+    captionFontSize
+  }) {
+    const scale = Math.min(
+      maximumWidthEmu / imageRecord.width,
+      maximumHeightEmu / imageRecord.height
+    );
+    const cx = Math.max(1, Math.round(imageRecord.width * scale));
+    const cy = Math.max(1, Math.round(imageRecord.height * scale));
+    const drawingId = 1000 + imageNumber;
+    const pictureId = 2000 + imageNumber;
+
+    return `
+      <w:tc>
+        <w:tcPr><w:tcW w:w="${cellWidth}" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr>
+        <w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="10"/></w:pPr>
+          <w:r><w:drawing>
+            <wp:inline distT="0" distB="0" distL="0" distR="0">
+              <wp:extent cx="${cx}" cy="${cy}"/>
+              <wp:docPr id="${drawingId}" name="Photo ${imageNumber}"/>
+              <wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>
+              <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                <pic:pic>
+                  <pic:nvPicPr><pic:cNvPr id="${pictureId}" name="Photo ${imageNumber}"/><pic:cNvPicPr/></pic:nvPicPr>
+                  <pic:blipFill><a:blip r:embed="${imageRecord.relationshipId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>
+                  <pic:spPr>
+                    <a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>
+                    <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+                  </pic:spPr>
+                </pic:pic>
+              </a:graphicData></a:graphic>
+            </wp:inline>
+          </w:drawing></w:r>
+        </w:p>
+        <w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr>
+          <w:r><w:rPr><w:sz w:val="${captionFontSize}"/></w:rPr><w:t xml:space="preserve">${escapeXml(imageRecord.caption)}</w:t></w:r>
+        </w:p>
+      </w:tc>`;
+  }
+
+  function createEmptyCellXml(cellWidth) {
+    return `<w:tc><w:tcPr><w:tcW w:w="${cellWidth}" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr><w:p/></w:tc>`;
+  }
+
+  function findAvailableRelationshipId(relationshipsXml, offset) {
+    let number = 5000 + offset;
+    while (relationshipsXml.includes(`Id="rId${number}"`)) number += 1;
+    return `rId${number}`;
+  }
+
+  function addImageRelationship(relationshipsXml, relationshipId, mediaName) {
+    if (!relationshipsXml.includes("</Relationships>")) {
+      throw new Error("Word relationships 檔案格式無效。");
+    }
+    const relationship = `<Relationship Id="${relationshipId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${mediaName}"/>`;
+    return relationshipsXml.replace("</Relationships>", `${relationship}</Relationships>`);
+  }
+
+  function ensureJpegContentType(contentTypesXml) {
+    if (/<Default[^>]+Extension=["'](?:jpg|jpeg)["'][^>]*\/>/i.test(contentTypesXml)) {
+      return contentTypesXml;
+    }
+    if (!contentTypesXml.includes("</Types>")) {
+      throw new Error("Word content-types 檔案格式無效。");
+    }
+    return contentTypesXml.replace(
+      "</Types>",
+      '<Default Extension="jpg" ContentType="image/jpeg"/></Types>'
+    );
+  }
+
+  function formatDate(value) {
+    const date = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(date.getTime())) throw new Error("服務日期無效。");
+    return new Intl.DateTimeFormat("zh-HK", {
+      year: "numeric",
+      month: "long",
+      day: "2-digit"
+    }).format(date);
+  }
+
+  function escapeXml(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&apos;");
+  }
+
+  function safeFilename(value) {
+    const cleaned = String(value)
+      .replace(/[<>:"/\\|?*\u0000-\u001F]+/g, "_")
+      .replace(/\s+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    return cleaned || "Location";
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  function setStatus(message, isError = false) {
+    elements.status.textContent = message;
+    elements.status.style.color = isError ? "#a83232" : "#1f6f43";
+  }
+}
