@@ -1,6 +1,5 @@
-# Tester
 Split Fire 🗣️🗣️🔥🔥
-📸📄 Photo Record Generator
+#📸📄 Photo Record Generator
 🖼️ Upload Photos • 📝 Add Captions • 🔄 Arrange • 📐 Choose Layout • 📄 Generate Word Report
 
 A simple browser-based tool for creating photo record reports from a Word template.
