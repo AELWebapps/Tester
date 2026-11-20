@@ -3,7 +3,7 @@
 /*
  * PHOTO RECORD GENERATOR
  * Required Word placeholders:
- * {{SERVICE_DATE}}, {{LOCATION}}, {{PHOTO_TABLE}}
+ * {{SERVICE_DATE}}, {{LOCATION}}, {{SUPPORTING_PHOTOS}}, {{PHOTO_TABLE}}
  */
 
 document.addEventListener("DOMContentLoaded", initializeApp);
@@ -13,7 +13,10 @@ function initializeApp() {
     templateInput: document.querySelector("#templateInput"),
     photoInput: document.querySelector("#photoInput"),
     serviceDateInput: document.querySelector("#serviceDate"),
+    serviceDates: document.querySelector("#serviceDates"),
+    addServiceDateButton: document.querySelector("#addServiceDateButton"),
     locationInput: document.querySelector("#location"),
+    supportingPhotosInput: document.querySelector("#supportingPhotos"),
     fitOnePageMode: document.querySelector("#fitOnePageMode"),
     modeDescription: document.querySelector("#modeDescription"),
     previewGrid: document.querySelector("#previewGrid"),
@@ -35,6 +38,8 @@ function initializeApp() {
   }
 
   let photos = [];
+
+  elements.addServiceDateButton.addEventListener("click", addServiceDateInput);
 
   elements.photoInput.addEventListener("change", (event) => safelyAddFiles(event.target.files));
   elements.clearButton.addEventListener("click", clearPhotos);
@@ -68,6 +73,31 @@ function initializeApp() {
 
   updateModeDescription();
   renderPhotos();
+
+  function addServiceDateInput() {
+    const row = document.createElement("div");
+    row.className = "service-date-row";
+
+    const input = document.createElement("input");
+    input.type = "date";
+    input.className = "service-date-input";
+
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "small danger remove-date-button";
+    removeButton.textContent = "移除";
+    removeButton.addEventListener("click", () => row.remove());
+
+    row.append(input, removeButton);
+    elements.serviceDates.append(row);
+    input.focus();
+  }
+
+  function getServiceDates() {
+    return Array.from(elements.serviceDates.querySelectorAll(".service-date-input"))
+      .map((input) => input.value)
+      .filter(Boolean);
+  }
 
   function updateModeDescription() {
     elements.modeDescription.textContent = elements.fitOnePageMode.checked
@@ -231,8 +261,10 @@ function initializeApp() {
 
   async function generateReport() {
     const templateFile = elements.templateInput.files[0];
-    const serviceDate = elements.serviceDateInput.value;
+    const serviceDates = getServiceDates();
+    const serviceDate = serviceDates[0] || "";
     const location = elements.locationInput.value.trim();
+    const supportingPhotos = elements.supportingPhotosInput.value.trim();
     const fitOnePage = elements.fitOnePageMode.checked;
 
     if (!templateFile) return setStatus("請先選擇 Word 範本。", true);
@@ -264,10 +296,15 @@ function initializeApp() {
       let documentXml = await documentFile.async("string");
       let relationshipsXml = await relationshipsFile.async("string");
       let contentTypesXml = await contentTypesFile.async("string");
-      const formattedServiceDate = formatDate(serviceDate);
+      const formattedServiceDate = serviceDates.map(formatDate).join("、");
 
       documentXml = replaceTextPlaceholder(documentXml, "{{SERVICE_DATE}}", formattedServiceDate);
       documentXml = replaceTextPlaceholder(documentXml, "{{LOCATION}}", location);
+      documentXml = replaceTextPlaceholder(
+        documentXml,
+        "{{SUPPORTING_PHOTOS}}",
+        supportingPhotos
+      );
 
       const imageRecords = [];
       for (let index = 0; index < photos.length; index += 1) {
