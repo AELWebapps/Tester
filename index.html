@@ -171,6 +171,31 @@
       margin-top: 18px;
     }
 
+    .field-full-width {
+      grid-column: 1 / -1;
+    }
+
+    .service-dates {
+      display: grid;
+      gap: 8px;
+    }
+
+    .service-date-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .service-date-row .service-date-input {
+      flex: 1;
+    }
+
+    .add-date-button,
+    .remove-date-button {
+      flex: 0 0 auto;
+      white-space: nowrap;
+    }
+
     /*
      * 版面配置模式
      */
@@ -581,10 +606,16 @@
         <label>
           服務日期
 
-          <input
-            id="serviceDate"
-            type="date"
-          >
+          <div id="serviceDates" class="service-dates">
+            <div class="service-date-row">
+              <input
+                id="serviceDate"
+                class="service-date-input"
+                type="date"
+              >
+              <button id="addServiceDateButton" class="small add-date-button" type="button">+ 新增日期</button>
+            </div>
+          </div>
         </label>
 
         <label>
@@ -594,6 +625,17 @@
             id="location"
             type="text"
             placeholder="例如：泵房 A"
+            autocomplete="off"
+          >
+        </label>
+
+        <label class="field-full-width">
+          支援相片文字
+
+          <input
+            id="supportingPhotos"
+            type="text"
+            placeholder="例如：附件 3 頁"
             autocomplete="off"
           >
         </label>
