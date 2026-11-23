@@ -171,31 +171,6 @@
       margin-top: 18px;
     }
 
-    .field-full-width {
-      grid-column: 1 / -1;
-    }
-
-    .service-dates {
-      display: grid;
-      gap: 8px;
-    }
-
-    .service-date-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .service-date-row .service-date-input {
-      flex: 1;
-    }
-
-    .add-date-button,
-    .remove-date-button {
-      flex: 0 0 auto;
-      white-space: nowrap;
-    }
-
     /*
      * 版面配置模式
      */
@@ -606,16 +581,10 @@
         <label>
           服務日期
 
-          <div id="serviceDates" class="service-dates">
-            <div class="service-date-row">
-              <input
-                id="serviceDate"
-                class="service-date-input"
-                type="date"
-              >
-              <button id="addServiceDateButton" class="small add-date-button" type="button">+ 新增日期</button>
-            </div>
-          </div>
+          <input
+            id="serviceDate"
+            type="date"
+          >
         </label>
 
         <label>
@@ -625,17 +594,6 @@
             id="location"
             type="text"
             placeholder="例如：泵房 A"
-            autocomplete="off"
-          >
-        </label>
-
-        <label class="field-full-width">
-          Support Photo 名
-
-          <input
-            id="supportingPhotos"
-            type="text"
-            placeholder="例如：附件 3 頁"
             autocomplete="off"
           >
         </label>
@@ -652,6 +610,22 @@
           <span>
             將所有相片置於同一頁
           </span>
+        </label>
+
+        <label class="mode-switch">
+          <input
+            id="sixPhotosPerPageMode"
+            type="checkbox"
+          >
+
+          <span>
+            每頁 6 張相片
+          </span>
+        </label>
+
+        <label class="mode-switch">
+          <input id="fourPhotosPerPageMode" type="checkbox">
+          <span>每頁 4 張相片</span>
         </label>
 
         <p id="modeDescription">
