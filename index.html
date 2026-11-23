@@ -171,6 +171,11 @@
       margin-top: 18px;
     }
 
+
+    #serviceDates { display: grid; gap: 8px; }
+    .service-date-row { display: flex; gap: 8px; align-items: center; }
+    .service-date-input { flex: 1; }
+    .service-date-row button { flex: 0 0 auto; white-space: nowrap; }
     /*
      * 版面配置模式
      */
@@ -581,10 +586,12 @@
         <label>
           服務日期
 
-          <input
-            id="serviceDate"
-            type="date"
-          >
+          <div id="serviceDates">
+            <div class="service-date-row">
+              <input id="serviceDate" class="service-date-input" type="date">
+              <button id="addServiceDateButton" class="small" type="button">+ 新增日期</button>
+            </div>
+          </div>
         </label>
 
         <label>
