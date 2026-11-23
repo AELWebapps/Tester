@@ -3,7 +3,7 @@
 /*
  * PHOTO RECORD GENERATOR
  * Required Word placeholders:
- * {{SERVICE_DATE}}, {{LOCATION}}, {{SUPPORTING_PHOTOS}}, {{PHOTO_TABLE}}
+ * {{SERVICE_DATE}}, {{LOCATION}}, {{PHOTO_TABLE}}
  */
 
 document.addEventListener("DOMContentLoaded", initializeApp);
@@ -13,11 +13,10 @@ function initializeApp() {
     templateInput: document.querySelector("#templateInput"),
     photoInput: document.querySelector("#photoInput"),
     serviceDateInput: document.querySelector("#serviceDate"),
-    serviceDates: document.querySelector("#serviceDates"),
-    addServiceDateButton: document.querySelector("#addServiceDateButton"),
     locationInput: document.querySelector("#location"),
-    supportingPhotosInput: document.querySelector("#supportingPhotos"),
     fitOnePageMode: document.querySelector("#fitOnePageMode"),
+    sixPhotosPerPageMode: document.querySelector("#sixPhotosPerPageMode"),
+    fourPhotosPerPageMode: document.querySelector("#fourPhotosPerPageMode"),
     modeDescription: document.querySelector("#modeDescription"),
     previewGrid: document.querySelector("#previewGrid"),
     photoCount: document.querySelector("#photoCount"),
@@ -39,12 +38,21 @@ function initializeApp() {
 
   let photos = [];
 
-  elements.addServiceDateButton.addEventListener("click", addServiceDateInput);
-
   elements.photoInput.addEventListener("change", (event) => safelyAddFiles(event.target.files));
   elements.clearButton.addEventListener("click", clearPhotos);
   elements.generateButton.addEventListener("click", generateReport);
-  elements.fitOnePageMode.addEventListener("change", updateModeDescription);
+  function setLayoutMode(selectedMode) {
+    const modes = [elements.fitOnePageMode, elements.sixPhotosPerPageMode, elements.fourPhotosPerPageMode];
+    modes.forEach((mode) => {
+      if (mode !== selectedMode) mode.checked = false;
+      mode.disabled = Boolean(selectedMode.checked && mode !== selectedMode);
+    });
+    updateModeDescription();
+  }
+
+  elements.fitOnePageMode.addEventListener("change", () => setLayoutMode(elements.fitOnePageMode));
+  elements.sixPhotosPerPageMode.addEventListener("change", () => setLayoutMode(elements.sixPhotosPerPageMode));
+  elements.fourPhotosPerPageMode.addEventListener("change", () => setLayoutMode(elements.fourPhotosPerPageMode));
 
   ["dragenter", "dragover"].forEach((eventName) => {
     elements.dropZone.addEventListener(eventName, (event) => {
@@ -74,35 +82,14 @@ function initializeApp() {
   updateModeDescription();
   renderPhotos();
 
-  function addServiceDateInput() {
-    const row = document.createElement("div");
-    row.className = "service-date-row";
-
-    const input = document.createElement("input");
-    input.type = "date";
-    input.className = "service-date-input";
-
-    const removeButton = document.createElement("button");
-    removeButton.type = "button";
-    removeButton.className = "small danger remove-date-button";
-    removeButton.textContent = "移除";
-    removeButton.addEventListener("click", () => row.remove());
-
-    row.append(input, removeButton);
-    elements.serviceDates.append(row);
-    input.focus();
-  }
-
-  function getServiceDates() {
-    return Array.from(elements.serviceDates.querySelectorAll(".service-date-input"))
-      .map((input) => input.value)
-      .filter(Boolean);
-  }
-
   function updateModeDescription() {
     elements.modeDescription.textContent = elements.fitOnePageMode.checked
       ? "單頁模式：系統會自動計算行數、欄數及相片尺寸。"
-      : "標準模式：每頁最多九張相片。";
+      : elements.sixPhotosPerPageMode.checked
+        ? "6 張模式：每頁最多六張相片，以 2 欄 x 3 行排列。"
+        : elements.fourPhotosPerPageMode.checked
+          ? "4 張模式：每頁最多四張相片，以 2 欄 x 2 行排列。"
+          : "標準模式：每頁最多九張相片。";
   }
 
   function safelyAddFiles(fileList) {
@@ -261,11 +248,11 @@ function initializeApp() {
 
   async function generateReport() {
     const templateFile = elements.templateInput.files[0];
-    const serviceDates = getServiceDates();
-    const serviceDate = serviceDates[0] || "";
+    const serviceDate = elements.serviceDateInput.value;
     const location = elements.locationInput.value.trim();
-    const supportingPhotos = elements.supportingPhotosInput.value.trim();
     const fitOnePage = elements.fitOnePageMode.checked;
+    const sixPhotosPerPage = elements.sixPhotosPerPageMode.checked;
+    const fourPhotosPerPage = elements.fourPhotosPerPageMode.checked;
 
     if (!templateFile) return setStatus("請先選擇 Word 範本。", true);
     if (!/\.docx$/i.test(templateFile.name)) return setStatus("範本必須為 .docx 檔案。", true);
@@ -296,15 +283,10 @@ function initializeApp() {
       let documentXml = await documentFile.async("string");
       let relationshipsXml = await relationshipsFile.async("string");
       let contentTypesXml = await contentTypesFile.async("string");
-      const formattedServiceDate = serviceDates.map(formatDate).join("、");
+      const formattedServiceDate = formatDate(serviceDate);
 
       documentXml = replaceTextPlaceholder(documentXml, "{{SERVICE_DATE}}", formattedServiceDate);
       documentXml = replaceTextPlaceholder(documentXml, "{{LOCATION}}", location);
-      documentXml = replaceTextPlaceholder(
-        documentXml,
-        "{{SUPPORTING_PHOTOS}}",
-        supportingPhotos
-      );
 
       const imageRecords = [];
       for (let index = 0; index < photos.length; index += 1) {
@@ -328,7 +310,9 @@ function initializeApp() {
         imageRecords,
         formattedServiceDate,
         location,
-        fitOnePage
+        fitOnePage,
+        sixPhotosPerPage,
+        fourPhotosPerPage
       );
       documentXml = replaceBlockPlaceholder(documentXml, "{{PHOTO_TABLE}}", generatedPhotoXml);
 
@@ -342,7 +326,7 @@ function initializeApp() {
         mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
       });
 
-      const modeName = fitOnePage ? "One_Page" : "Standard";
+      const modeName = fitOnePage ? "One_Page" : sixPhotosPerPage ? "6_Per_Page" : fourPhotosPerPage ? "4_Per_Page" : "Standard";
       const filename = `Photo_Record_${serviceDate}_${safeFilename(location)}_${modeName}.docx`;
       downloadBlob(outputBlob, filename);
       setStatus(`報告已成功產生：${filename}`);
@@ -484,10 +468,35 @@ function initializeApp() {
     });
   }
 
-  function createPhotoContentXml(imageRecords, serviceDate, location, fitOnePage) {
-    return fitOnePage
-      ? createFitOnePageTable(imageRecords)
-      : createStandardPhotoPages(imageRecords, serviceDate, location);
+  function createPhotoContentXml(imageRecords, serviceDate, location, fitOnePage, sixPhotosPerPage, fourPhotosPerPage) {
+    if (fitOnePage) return createFitOnePageTable(imageRecords);
+    if (sixPhotosPerPage) return createSixPhotoPages(imageRecords, serviceDate, location);
+    if (fourPhotosPerPage) return createFourPhotoPages(imageRecords, serviceDate, location);
+    return createStandardPhotoPages(imageRecords, serviceDate, location);
+  }
+
+  function createFourPhotoPages(imageRecords, serviceDate, location) {
+    const fragments = [];
+    for (let start = 0; start < imageRecords.length; start += 4) {
+      if (start > 0) {
+        fragments.push(createPageBreakXml());
+        fragments.push(createPhotoPageHeaderXml(serviceDate, location));
+      }
+      fragments.push(createStandardTable(imageRecords.slice(start, start + 4), 2, start));
+    }
+    return fragments.join("");
+  }
+
+  function createSixPhotoPages(imageRecords, serviceDate, location) {
+    const fragments = [];
+    for (let start = 0; start < imageRecords.length; start += 6) {
+      if (start > 0) {
+        fragments.push(createPageBreakXml());
+        fragments.push(createPhotoPageHeaderXml(serviceDate, location));
+      }
+      fragments.push(createStandardTable(imageRecords.slice(start, start + 6), 2, start));
+    }
+    return fragments.join("");
   }
 
   function createStandardPhotoPages(imageRecords, serviceDate, location) {
