@@ -1,9 +1,9 @@
 "use strict";
 
 /*
- * PHOTO RECORD GENERATOR
+ * PHOTO RECORD GENERATOR v2
  * Required Word placeholders:
- * {{SERVICE_DATE}}, {{LOCATION}}, {{PHOTO_TABLE}}
+ * {{SERVICE_DATE}}, {{LOCATION}}, {{SUPPORTING_PHOTOS}}, {{PHOTO_TABLE}}
  */
 
 document.addEventListener("DOMContentLoaded", initializeApp);
@@ -16,6 +16,7 @@ function initializeApp() {
     serviceDates: document.querySelector("#serviceDates"),
     addServiceDateButton: document.querySelector("#addServiceDateButton"),
     locationInput: document.querySelector("#location"),
+    supportingPhotosInput: document.querySelector("#supportingPhotos"),
     fitOnePageMode: document.querySelector("#fitOnePageMode"),
     sixPhotosPerPageMode: document.querySelector("#sixPhotosPerPageMode"),
     fourPhotosPerPageMode: document.querySelector("#fourPhotosPerPageMode"),
@@ -276,6 +277,7 @@ function initializeApp() {
     const serviceDates = getServiceDates();
     const serviceDate = serviceDates[0] || "";
     const location = elements.locationInput.value.trim();
+    const supportingPhotos = elements.supportingPhotosInput.value.trim();
     const fitOnePage = elements.fitOnePageMode.checked;
     const sixPhotosPerPage = elements.sixPhotosPerPageMode.checked;
     const fourPhotosPerPage = elements.fourPhotosPerPageMode.checked;
@@ -313,6 +315,7 @@ function initializeApp() {
 
       documentXml = replaceTextPlaceholder(documentXml, "{{SERVICE_DATE}}", formattedServiceDate);
       documentXml = replaceTextPlaceholder(documentXml, "{{LOCATION}}", location);
+      documentXml = replaceTextPlaceholder(documentXml, "{{SUPPORTING_PHOTOS}}", supportingPhotos);
 
       const imageRecords = [];
       for (let index = 0; index < photos.length; index += 1) {
