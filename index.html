@@ -172,6 +172,7 @@
     }
 
 
+    .field-full-width { grid-column: 1 / -1; }
     #serviceDates { display: grid; gap: 8px; }
     .service-date-row { display: flex; gap: 8px; align-items: center; }
     .service-date-input { flex: 1; }
@@ -601,6 +602,16 @@
             id="location"
             type="text"
             placeholder="例如：泵房 A"
+            autocomplete="off"
+          >
+        </label>
+
+        <label class="field-full-width">
+          支援相片
+          <input
+            id="supportingPhotos"
+            type="text"
+            placeholder="輸入支援相片文字"
             autocomplete="off"
           >
         </label>
