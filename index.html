@@ -770,11 +770,76 @@
     </aside>
   </main>
 
-  <!-- 使用本機 JSZip，確保離線時仍可產生 Word 報告。 -->
-  <script src="./jszip.min.js"></script>
-  <script src="./app.js"></script>
+  <!-- JSZip 必須在 app.js 之前載入。 -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"
+  ></script>
 
-  <!-- 註冊 Service Worker，讓瀏覽器快取應用程式供離線使用。 -->
+  <script src="./app.js"></script>
+  <!--
+    先使用本機 JSZip。若本機檔案不存在或載入失敗，而且裝置有網路，
+    系統會靜默改用 CDN，不向使用者顯示 JSZip 警告。
+  -->
+  <script src="./jszip.min.js"></script>
+
+  <script>
+    async function ensureJSZip() {
+      if (typeof window.JSZip !== "undefined") {
+        return true;
+      }
+
+      if (!navigator.onLine) {
+        return false;
+      }
+
+      try {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
+          script.async = true;
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+
+        return typeof window.JSZip !== "undefined";
+      } catch (error) {
+        console.error("Online JSZip fallback failed:", error);
+        return false;
+      }
+    }
+
+    function loadAppScript() {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "./app.js";
+        script.onload = resolve;
+        script.onerror = reject;
+        document.body.appendChild(script);
+      });
+    }
+
+    async function startPhotoRecordApp() {
+      const jsZipReady = await ensureJSZip();
+
+      // app.js can still initialize the interface if JSZip is unavailable.
+      // Word generation remains unavailable until JSZip can be loaded.
+      try {
+        await loadAppScript();
+      } catch (error) {
+        console.error("app.js failed to load:", error);
+        return;
+      }
+
+      if (!jsZipReady) {
+        console.error("JSZip is currently unavailable. Word generation is disabled.");
+      }
+    }
+
+    startPhotoRecordApp();
+  </script>
+
+  <!-- Register the Service Worker for offline app-shell caching. -->
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", async () => {
