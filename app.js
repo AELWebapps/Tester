@@ -6,9 +6,18 @@
  * {{SERVICE_DATE}}, {{LOCATION}}, {{SUPPORTING_PHOTOS}}, {{PHOTO_TABLE}}
  */
 
-document.addEventListener("DOMContentLoaded", initializeApp);
+if (!window.__photoRecordAppRegistered) {
+  window.__photoRecordAppRegistered = true;
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initializeApp, { once: true });
+  } else {
+    initializeApp();
+  }
+}
 
 function initializeApp() {
+  if (window.__photoRecordAppInitialized) return;
+  window.__photoRecordAppInitialized = true;
   const elements = {
     templateInput: document.querySelector("#templateInput"),
     photoInput: document.querySelector("#photoInput"),
@@ -35,7 +44,7 @@ function initializeApp() {
 
   if (missingElements.length > 0) {
     console.error("Missing HTML elements:", missingElements);
-    alert("應用程式無法啟動，因為缺少以下 HTML 元素：\n\n" + missingElements.join("\n"));
+    alert("The application cannot start because these HTML elements are missing:\n\n" + missingElements.join("\n"));
     return;
   }
 
@@ -77,10 +86,10 @@ function initializeApp() {
   elements.dropZone.addEventListener("drop", (event) => safelyAddFiles(event.dataTransfer.files));
 
   if (typeof JSZip === "undefined") {
-    setStatus("JSZip 載入失敗，請檢查網路連線或 index.html 內的 JSZip script。", true);
+    setStatus("");
     elements.generateButton.disabled = true;
   } else {
-    setStatus("應用程式已準備就緒。");
+    setStatus("Application ready.");
   }
 
   updateModeDescription();
@@ -95,7 +104,7 @@ function initializeApp() {
     const removeButton = document.createElement("button");
     removeButton.type = "button";
     removeButton.className = "small danger";
-    removeButton.textContent = "移除";
+    removeButton.textContent = "Remove";
     removeButton.addEventListener("click", () => row.remove());
     row.append(input, removeButton);
     elements.serviceDates.append(row);
@@ -110,12 +119,12 @@ function initializeApp() {
 
   function updateModeDescription() {
     elements.modeDescription.textContent = elements.fitOnePageMode.checked
-      ? "單頁模式：系統會自動計算行數、欄數及相片尺寸。"
+      ? "Single-page mode: rows, columns and photo sizes are calculated automatically."
       : elements.sixPhotosPerPageMode.checked
-        ? "6 張模式：每頁最多六張相片，以 2 欄 x 3 行排列。"
+        ? "6-photo mode: up to 6 photos per page in a 2 x 3 layout."
         : elements.fourPhotosPerPageMode.checked
-          ? "4 張模式：每頁最多四張相片，以 2 欄 x 2 行排列。"
-          : "標準模式：每頁最多九張相片。";
+          ? "4-photo mode: up to 4 photos per page in a 2 x 2 layout."
+          : "Standard mode: up to 9 photos per page.";
   }
 
   function safelyAddFiles(fileList) {
@@ -123,14 +132,14 @@ function initializeApp() {
       addFiles(fileList);
     } catch (error) {
       console.error("Photo-selection error:", error);
-      setStatus(`選擇相片失敗：${error.message}`, true);
+      setStatus(`Photo selection failed: ${error.message}`, true);
     }
   }
 
   function addFiles(fileList) {
     const files = Array.from(fileList || []);
     if (files.length === 0) {
-      setStatus("尚未選擇任何檔案。", true);
+      setStatus("No files selected.", true);
       return;
     }
 
@@ -142,7 +151,7 @@ function initializeApp() {
 
     if (validFiles.length === 0) {
       elements.photoInput.value = "";
-      setStatus("沒有選擇支援的相片格式。請使用 JPG、JPEG 或 PNG 檔案。", true);
+      setStatus("No supported photo files were selected. Use JPG, JPEG or PNG files.", true);
       return;
     }
 
@@ -168,9 +177,9 @@ function initializeApp() {
     elements.photoInput.value = "";
     renderPhotos();
 
-    let message = `已選擇 ${photos.length} 張相片。`;
-    if (duplicateCount > 0) message += ` 已略過 ${duplicateCount} 個重複檔案。`;
-    if (rejectedCount > 0) message += ` 已略過 ${rejectedCount} 個不支援的檔案。`;
+    let message = `Selected ${photos.length} photos.`;
+    if (duplicateCount > 0) message += ` Skipped ${duplicateCount} duplicate files.`;
+    if (rejectedCount > 0) message += ` Skipped ${rejectedCount} unsupported files.`;
     setStatus(message);
   }
 
@@ -189,7 +198,7 @@ function initializeApp() {
     photos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
     photos = [];
     renderPhotos();
-    setStatus("已清除所有已選擇的相片。");
+    setStatus("All selected photos have been cleared.");
   }
 
   function removePhoto(index) {
@@ -197,7 +206,7 @@ function initializeApp() {
     URL.revokeObjectURL(photos[index].previewUrl);
     photos.splice(index, 1);
     renderPhotos();
-    setStatus(`已選擇 ${photos.length} 張相片。`);
+    setStatus(`Selected ${photos.length} photos.`);
   }
 
   function movePhoto(index, direction) {
@@ -205,17 +214,17 @@ function initializeApp() {
     if (targetIndex < 0 || targetIndex >= photos.length) return;
     [photos[index], photos[targetIndex]] = [photos[targetIndex], photos[index]];
     renderPhotos();
-    setStatus("相片次序已更新。");
+    setStatus("Photo order updated.");
   }
 
   function renderPhotos() {
-    elements.photoCount.textContent = `已選 ${photos.length} 張`;
+    elements.photoCount.textContent = `Selected ${photos.length} photos`;
     elements.previewGrid.innerHTML = "";
 
     if (photos.length === 0) {
       const emptyState = document.createElement("p");
       emptyState.className = "empty-state";
-      emptyState.textContent = "尚未選擇相片。";
+      emptyState.textContent = "No photos selected.";
       elements.previewGrid.append(emptyState);
       return;
     }
@@ -226,13 +235,13 @@ function initializeApp() {
 
       const image = document.createElement("img");
       image.src = photo.previewUrl;
-      image.alt = `已選擇的相片 ${index + 1}`;
+      image.alt = `Selected photo ${index + 1}`;
 
       const body = document.createElement("div");
       body.className = "photo-body";
 
       const title = document.createElement("strong");
-      title.textContent = `相片 ${index + 1}`;
+      title.textContent = `Photo ${index + 1}`;
 
       const filename = document.createElement("p");
       filename.textContent = photo.file.name;
@@ -240,7 +249,7 @@ function initializeApp() {
 
       const captionInput = document.createElement("input");
       captionInput.type = "text";
-      captionInput.placeholder = "相片說明";
+      captionInput.placeholder = "Photo caption";
       captionInput.value = photo.caption;
       captionInput.addEventListener("input", (event) => {
         photo.caption = event.target.value;
@@ -249,11 +258,11 @@ function initializeApp() {
       const controls = document.createElement("div");
       controls.className = "photo-controls";
 
-      const moveLeftButton = makeButton("←", "將相片向前移", () => movePhoto(index, -1));
+      const moveLeftButton = makeButton("←", "Move photo earlier", () => movePhoto(index, -1));
       moveLeftButton.disabled = index === 0;
-      const moveRightButton = makeButton("→", "將相片向後移", () => movePhoto(index, 1));
+      const moveRightButton = makeButton("→", "Move photo later", () => movePhoto(index, 1));
       moveRightButton.disabled = index === photos.length - 1;
-      const removeButton = makeButton("移除", "移除相片", () => removePhoto(index), "danger");
+      const removeButton = makeButton("Remove", "Remove photo", () => removePhoto(index), "danger");
 
       controls.append(moveLeftButton, moveRightButton, removeButton);
       body.append(title, filename, captionInput, controls);
@@ -282,20 +291,20 @@ function initializeApp() {
     const sixPhotosPerPage = elements.sixPhotosPerPageMode.checked;
     const fourPhotosPerPage = elements.fourPhotosPerPageMode.checked;
 
-    if (!templateFile) return setStatus("請先選擇 Word 範本。", true);
-    if (!/\.docx$/i.test(templateFile.name)) return setStatus("範本必須為 .docx 檔案。", true);
-    if (!serviceDate) return setStatus("請輸入服務日期。", true);
-    if (!location) return setStatus("請輸入地點。", true);
-    if (photos.length === 0) return setStatus("請至少選擇一張相片。", true);
+    if (!templateFile) return setStatus("Select a Word template first.", true);
+    if (!/\.docx$/i.test(templateFile.name)) return setStatus("The template must be a .docx file.", true);
+    if (!serviceDate) return setStatus("Enter at least one service date.", true);
+    if (!location) return setStatus("Enter a location.", true);
+    if (photos.length === 0) return setStatus("Select at least one photo.", true);
     if (fitOnePage && photos.length > 30) {
-      return setStatus("為確保相片清晰可讀，單頁模式最多支援 30 張相片。", true);
+      return setStatus("Single-page mode supports up to 30 photos to keep them readable.", true);
     }
-    if (typeof JSZip === "undefined") return setStatus("JSZip 無法使用。", true);
+    if (typeof JSZip === "undefined") return setStatus("JSZip is unavailable.", true);
 
     elements.generateButton.disabled = true;
 
     try {
-      setStatus(`正在準備 ${photos.length} 張相片...`);
+      setStatus(`Preparing ${photos.length} photos...`);
       const zip = await JSZip.loadAsync(await templateFile.arrayBuffer());
       const documentPath = "word/document.xml";
       const relationshipsPath = "word/_rels/document.xml.rels";
@@ -305,13 +314,13 @@ function initializeApp() {
       const relationshipsFile = zip.file(relationshipsPath);
       const contentTypesFile = zip.file(contentTypesPath);
       if (!documentFile || !relationshipsFile || !contentTypesFile) {
-        throw new Error("所選檔案不是有效的 Word 範本。");
+        throw new Error("The selected file is not a valid Word template.");
       }
 
       let documentXml = await documentFile.async("string");
       let relationshipsXml = await relationshipsFile.async("string");
       let contentTypesXml = await contentTypesFile.async("string");
-      const formattedServiceDate = serviceDates.map(formatDate).join("、");
+      const formattedServiceDate = serviceDates.map(formatDate).join(" ~ ");
 
       documentXml = replaceTextPlaceholder(documentXml, "{{SERVICE_DATE}}", formattedServiceDate);
       documentXml = replaceTextPlaceholder(documentXml, "{{LOCATION}}", location);
@@ -319,7 +328,7 @@ function initializeApp() {
 
       const imageRecords = [];
       for (let index = 0; index < photos.length; index += 1) {
-        setStatus(`正在處理第 ${index + 1} 張相片，共 ${photos.length} 張...`);
+        setStatus(`Processing photo ${index + 1} of ${photos.length}...`);
         const processedImage = await normalizeImage(photos[index].file, 1400, 1000);
         const mediaName = `photo_${index + 1}.jpg`;
         const relationshipId = findAvailableRelationshipId(relationshipsXml, index);
@@ -330,7 +339,7 @@ function initializeApp() {
           relationshipId,
           width: processedImage.width,
           height: processedImage.height,
-          caption: photos[index].caption.trim() || `相片 ${index + 1}`
+          caption: photos[index].caption.trim() || `Photo ${index + 1}`
         });
       }
 
@@ -349,7 +358,7 @@ function initializeApp() {
       zip.file(relationshipsPath, relationshipsXml);
       zip.file(contentTypesPath, contentTypesXml);
 
-      setStatus("正在建立 Word 文件...");
+      setStatus("Creating Word document...");
       const outputBlob = await zip.generateAsync({
         type: "blob",
         mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -358,10 +367,10 @@ function initializeApp() {
       const modeName = fitOnePage ? "One_Page" : sixPhotosPerPage ? "6_Per_Page" : fourPhotosPerPage ? "4_Per_Page" : "Standard";
       const filename = `Photo_Record_${serviceDate}_${safeFilename(location)}_${modeName}.docx`;
       downloadBlob(outputBlob, filename);
-      setStatus(`報告已成功產生：${filename}`);
+      setStatus(`Report created: ${filename}`);
     } catch (error) {
       console.error("Generation error:", error);
-      setStatus(`產生報告失敗：${error.message}`, true);
+      setStatus(`Report generation failed: ${error.message}`, true);
     } finally {
       elements.generateButton.disabled = false;
     }
@@ -370,7 +379,7 @@ function initializeApp() {
   function parseWordXml(xml) {
     const documentNode = new DOMParser().parseFromString(xml, "application/xml");
     if (documentNode.getElementsByTagName("parsererror").length > 0) {
-      throw new Error("Word 文件的 XML 格式無效。");
+      throw new Error("The Word document XML is invalid.");
     }
     return documentNode;
   }
@@ -415,7 +424,7 @@ function initializeApp() {
     });
 
     if (replacementCount === 0) {
-      throw new Error(`Word 範本缺少 ${placeholder}。`);
+      throw new Error(`The Word template is missing ${placeholder}。`);
     }
 
     console.log(`${placeholder}: replaced ${replacementCount} occurrence(s).`);
@@ -427,7 +436,7 @@ function initializeApp() {
     const documentNode = parseWordXml(xml);
     const placeholderParagraph = findParagraphContaining(documentNode, placeholder);
     if (!placeholderParagraph || !placeholderParagraph.parentNode) {
-      throw new Error(`Word 範本缺少 ${placeholder}。`);
+      throw new Error(`The Word template is missing ${placeholder}。`);
     }
 
     const fragmentDocument = parser.parseFromString(
@@ -443,11 +452,11 @@ function initializeApp() {
 
     if (fragmentDocument.getElementsByTagName("parsererror").length > 0) {
       console.error(new XMLSerializer().serializeToString(fragmentDocument));
-      throw new Error("產生的相片 XML 格式無效。");
+      throw new Error("The generated photo XML is invalid.");
     }
 
     const generatedElements = Array.from(fragmentDocument.documentElement.children);
-    if (generatedElements.length === 0) throw new Error("未能產生相片版面。");
+    if (generatedElements.length === 0) throw new Error("Unable to create the photo layout.");
 
     const parent = placeholderParagraph.parentNode;
     generatedElements.forEach((element) => {
@@ -466,14 +475,14 @@ function initializeApp() {
     canvas.width = width;
     canvas.height = height;
     const context = canvas.getContext("2d");
-    if (!context) throw new Error("無法使用圖片處理 Canvas。");
+    if (!context) throw new Error("Image-processing canvas is unavailable.");
     context.fillStyle = "#ffffff";
     context.fillRect(0, 0, width, height);
     context.drawImage(image, 0, 0, width, height);
 
     const blob = await new Promise((resolve, reject) => {
       canvas.toBlob(
-        (result) => result ? resolve(result) : reject(new Error(`無法處理 ${file.name}。`)),
+        (result) => result ? resolve(result) : reject(new Error(`Unable to process ${file.name}。`)),
         "image/jpeg",
         0.86
       );
@@ -491,51 +500,51 @@ function initializeApp() {
       };
       image.onerror = () => {
         URL.revokeObjectURL(url);
-        reject(new Error(`無法讀取 ${file.name}。`));
+        reject(new Error(`Unable to read ${file.name}。`));
       };
       image.src = url;
     });
   }
 
-  function createPhotoContentXml(imageRecords, serviceDate, location, fitOnePage, sixPhotosPerPage, fourPhotosPerPage) {
+  function createPhotoContentXml(imageRecords, serviceDate, location, fitOnePage, sixPhotosPerPage, fourPhotosPerPage, supportingPhotos) {
     if (fitOnePage) return createFitOnePageTable(imageRecords);
-    if (sixPhotosPerPage) return createSixPhotoPages(imageRecords, serviceDate, location);
-    if (fourPhotosPerPage) return createFourPhotoPages(imageRecords, serviceDate, location);
-    return createStandardPhotoPages(imageRecords, serviceDate, location);
+    if (sixPhotosPerPage) return createSixPhotoPages(imageRecords, serviceDate, location, supportingPhotos);
+    if (fourPhotosPerPage) return createFourPhotoPages(imageRecords, serviceDate, location, supportingPhotos);
+    return createStandardPhotoPages(imageRecords, serviceDate, location, supportingPhotos);
   }
 
-  function createFourPhotoPages(imageRecords, serviceDate, location) {
+  function createFourPhotoPages(imageRecords, serviceDate, location, supportingPhotos) {
     const fragments = [];
     for (let start = 0; start < imageRecords.length; start += 4) {
       if (start > 0) {
         fragments.push(createPageBreakXml());
-        fragments.push(createPhotoPageHeaderXml(serviceDate, location));
+        fragments.push(createPhotoPageHeaderXml(serviceDate, location, supportingPhotos));
       }
       fragments.push(createStandardTable(imageRecords.slice(start, start + 4), 2, start));
     }
     return fragments.join("");
   }
 
-  function createSixPhotoPages(imageRecords, serviceDate, location) {
+  function createSixPhotoPages(imageRecords, serviceDate, location, supportingPhotos) {
     const fragments = [];
     for (let start = 0; start < imageRecords.length; start += 6) {
       if (start > 0) {
         fragments.push(createPageBreakXml());
-        fragments.push(createPhotoPageHeaderXml(serviceDate, location));
+        fragments.push(createPhotoPageHeaderXml(serviceDate, location, supportingPhotos));
       }
       fragments.push(createStandardTable(imageRecords.slice(start, start + 6), 2, start));
     }
     return fragments.join("");
   }
 
-  function createStandardPhotoPages(imageRecords, serviceDate, location) {
+  function createStandardPhotoPages(imageRecords, serviceDate, location, supportingPhotos) {
     if (imageRecords.length <= 8) return createStandardTable(imageRecords, 2, 0);
 
     const fragments = [];
     for (let start = 0; start < imageRecords.length; start += 9) {
       if (start > 0) {
         fragments.push(createPageBreakXml());
-        fragments.push(createPhotoPageHeaderXml(serviceDate, location));
+        fragments.push(createPhotoPageHeaderXml(serviceDate, location, supportingPhotos));
       }
       fragments.push(createStandardTable(imageRecords.slice(start, start + 9), 3, start));
     }
@@ -546,16 +555,16 @@ function initializeApp() {
     return `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;
   }
 
-  function createPhotoPageHeaderXml(serviceDate, location) {
+  function createPhotoPageHeaderXml(serviceDate, location, supportingPhotos) {
     return `
       <w:p><w:pPr><w:spacing w:before="0" w:after="60"/></w:pPr>
-        <w:r><w:rPr><w:b/><w:sz w:val="24"/></w:rPr><w:t>相片記錄：</w:t></w:r>
+        <w:r><w:rPr><w:b/><w:sz w:val="24"/></w:rPr><w:t>${escapeXml(`Supporting Photos: ${supportingPhotos || ""}`)}</w:t></w:r>
       </w:p>
       <w:p><w:pPr><w:spacing w:before="0" w:after="20"/></w:pPr>
-        <w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>${escapeXml(`服務日期：${serviceDate}`)}</w:t></w:r>
+        <w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>${escapeXml(`Service Date: ${serviceDate}`)}</w:t></w:r>
       </w:p>
       <w:p><w:pPr><w:spacing w:before="0" w:after="240"/></w:pPr>
-        <w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>${escapeXml(`地點：${location}`)}</w:t></w:r>
+        <w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>${escapeXml(`Location: ${location}`)}</w:t></w:r>
       </w:p>`;
   }
 
@@ -604,7 +613,7 @@ function initializeApp() {
         bestLayout = { columns, rows, cellWidth, rowHeight, photoWidth, photoHeight, score };
       }
     }
-    if (!bestLayout) throw new Error("無法計算適合單頁顯示的版面配置。");
+    if (!bestLayout) throw new Error("Unable to calculate a suitable single-page layout.");
     return bestLayout;
   }
 
@@ -718,7 +727,7 @@ function initializeApp() {
 
   function addImageRelationship(relationshipsXml, relationshipId, mediaName) {
     if (!relationshipsXml.includes("</Relationships>")) {
-      throw new Error("Word relationships 檔案格式無效。");
+      throw new Error("The Word relationships file is invalid.");
     }
     const relationship = `<Relationship Id="${relationshipId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${mediaName}"/>`;
     return relationshipsXml.replace("</Relationships>", `${relationship}</Relationships>`);
@@ -729,7 +738,7 @@ function initializeApp() {
       return contentTypesXml;
     }
     if (!contentTypesXml.includes("</Types>")) {
-      throw new Error("Word content-types 檔案格式無效。");
+      throw new Error("The Word content-types file is invalid.");
     }
     return contentTypesXml.replace(
       "</Types>",
@@ -738,12 +747,15 @@ function initializeApp() {
   }
 
   function formatDate(value) {
-    const date = new Date(`${value}T00:00:00`);
-    if (Number.isNaN(date.getTime())) throw new Error("服務日期無效。");
-    return new Intl.DateTimeFormat("zh-HK", {
-      year: "numeric",
+    const [year, month, day] = String(value).split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    if (!year || !month || !day || Number.isNaN(date.getTime())) {
+      throw new Error("Invalid service date.");
+    }
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
       month: "long",
-      day: "2-digit"
+      year: "numeric"
     }).format(date);
   }
 
