@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-Hant-HK">
+<html lang="en-HK">
 <head>
   <meta charset="utf-8">
 
@@ -8,7 +8,7 @@
     content="width=device-width, initial-scale=1"
   >
 
-  <title>相片紀錄產生器</title>
+  <title>Photo Record Generator</title>
 
   <style>
     :root {
@@ -178,7 +178,7 @@
     .service-date-input { flex: 1; }
     .service-date-row button { flex: 0 0 auto; white-space: nowrap; }
     /*
-     * 版面配置模式
+     * Layout Modes
      */
 
     .mode-panel {
@@ -546,35 +546,31 @@
   <main class="app-shell">
     <header class="page-header">
       <p class="eyebrow">
-        瀏覽器版 Word 報告產生器
+        Browser-based Word Report Generator
       </p>
 
       <h1>
-        相片紀錄產生器
+        Photo Record Generator
       </h1>
 
-      <p class="intro">
-        選擇 Word 範本並上載相片。你可以調整相片次序、
-        編輯相片說明、選擇版面配置模式，然後下載完成的
-        Word 報告。
-      </p>
+      <p class="intro">Select a Word template and upload photos. Reorder photos, edit captions, choose a page layout, and download the completed Word report.</p>
     </header>
 
-    <!-- 報告設定 -->
+    <!-- Report Settings -->
     <section
       class="panel"
       aria-labelledby="reportSettingsHeading"
     >
       <p class="eyebrow">
-        步驟 1
+        Step 1
       </p>
 
       <h2 id="reportSettingsHeading">
-        報告設定
+        Report Settings
       </h2>
 
       <label>
-        Word 範本
+        Word Template
 
         <input
           id="templateInput"
@@ -585,39 +581,39 @@
 
       <div class="field-grid">
         <label>
-          服務日期
+          Service Date
 
           <div id="serviceDates">
             <div class="service-date-row">
               <input id="serviceDate" class="service-date-input" type="date">
-              <button id="addServiceDateButton" class="small" type="button">+ 新增日期</button>
+              <button id="addServiceDateButton" class="small" type="button">+ Add Date</button>
             </div>
           </div>
         </label>
 
         <label>
-          地點
+          Location
 
           <input
             id="location"
             type="text"
-            placeholder="例如：泵房 A"
+            placeholder="e.g. Pump Room A"
             autocomplete="off"
           >
         </label>
 
         <label class="field-full-width">
-          支援相片
+          Supporting Photos
           <input
             id="supportingPhotos"
             type="text"
-            placeholder="輸入支援相片文字"
+            placeholder="Enter supporting document name or reference"
             autocomplete="off"
           >
         </label>
       </div>
 
-      <!-- 版面配置模式 -->
+      <!-- Layout Modes -->
       <div class="mode-panel">
         <label class="mode-switch">
           <input
@@ -626,7 +622,7 @@
           >
 
           <span>
-            將所有相片置於同一頁
+            Place all photos on one page
           </span>
         </label>
 
@@ -637,17 +633,17 @@
           >
 
           <span>
-            每頁 6 張相片
+            6 photos per page
           </span>
         </label>
 
         <label class="mode-switch">
           <input id="fourPhotosPerPageMode" type="checkbox">
-          <span>每頁 4 張相片</span>
+          <span>4 photos per page</span>
         </label>
 
         <p id="modeDescription">
-          標準模式：每頁最多九張相片。
+          Standard mode: up to 9 photos per page.
         </p>
       </div>
     </section>
@@ -658,11 +654,11 @@
       aria-labelledby="photoUploadHeading"
     >
       <p class="eyebrow">
-        步驟 2
+        Step 2
       </p>
 
       <h2 id="photoUploadHeading">
-        加入相片
+        Add Photos
       </h2>
 
       <label
@@ -670,11 +666,11 @@
         id="dropZone"
       >
         <strong>
-          將相片拖放到此處
+          Drag and drop photos here
         </strong>
 
         <span>
-          或選擇 JPG、JPEG 或 PNG 檔案
+          or select JPG, JPEG or PNG files
         </span>
 
         <input
@@ -694,11 +690,11 @@
       <div class="section-heading">
         <div>
           <p class="eyebrow">
-            步驟 3
+            Step 3
           </p>
 
           <h2 id="photoReviewHeading">
-            檢視已選相片
+            Review Selected Photos
           </h2>
         </div>
 
@@ -706,7 +702,7 @@
           id="photoCount"
           aria-live="polite"
         >
-          已選 0 張
+          0 photos selected
         </span>
       </div>
 
@@ -715,7 +711,7 @@
         class="preview-grid"
       >
         <p class="empty-state">
-          尚未選擇相片。
+          No photos selected.
         </p>
       </div>
     </section>
@@ -723,21 +719,21 @@
     <!-- 操作按鈕 -->
     <section
       class="actions"
-      aria-label="報告操作"
+      aria-label="Report actions"
     >
       <button
         id="clearButton"
         class="secondary"
         type="button"
       >
-        清除相片
+        Clear Photos
       </button>
 
       <button
         id="generateButton"
         type="button"
       >
-        產生 Word 報告
+        Generate Word Report
       </button>
     </section>
 
@@ -751,47 +747,29 @@
     <!-- 版面配置說明 -->
     <aside class="information">
       <h2>
-        版面配置模式
+        Layout Modes
       </h2>
 
       <ul>
         <li>
-          <strong>標準模式：</strong>
-          每個相片頁最多放置九張相片。如有更多相片，
-          新頁會重複顯示「支援相片」標題、服務日期及地點。
+          <strong>Standard mode:</strong>
+          Up to 9 photos are placed on each photo page. Additional pages repeat the Supporting Photos reference, service date and location.
         </li>
 
         <li>
-          <strong>將所有相片置於同一頁：</strong>
-          應用程式會自動計算列數、欄數及相片尺寸，
-          將全部已選相片放在同一個相片頁面內。
+          <strong>Place all photos on one page:</strong>
+          The application automatically calculates rows, columns and photo sizes to place all selected photos on one page.
         </li>
       </ul>
     </aside>
   </main>
 
-  <!-- JSZip 必須在 app.js 之前載入。 -->
-  <script
-    src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"
-  ></script>
-
-  <script src="./app.js"></script>
-  <!--
-    先使用本機 JSZip。若本機檔案不存在或載入失敗，而且裝置有網路，
-    系統會靜默改用 CDN，不向使用者顯示 JSZip 警告。
-  -->
+  <!-- Local JSZip first; silent CDN fallback when online. -->
   <script src="./jszip.min.js"></script>
-
   <script>
     async function ensureJSZip() {
-      if (typeof window.JSZip !== "undefined") {
-        return true;
-      }
-
-      if (!navigator.onLine) {
-        return false;
-      }
-
+      if (typeof window.JSZip !== "undefined") return true;
+      if (!navigator.onLine) return false;
       try {
         await new Promise((resolve, reject) => {
           const script = document.createElement("script");
@@ -801,7 +779,6 @@
           script.onerror = reject;
           document.head.appendChild(script);
         });
-
         return typeof window.JSZip !== "undefined";
       } catch (error) {
         console.error("Online JSZip fallback failed:", error);
@@ -809,46 +786,22 @@
       }
     }
 
-    function loadAppScript() {
-      return new Promise((resolve, reject) => {
-        const script = document.createElement("script");
-        script.src = "./app.js";
-        script.onload = resolve;
-        script.onerror = reject;
-        document.body.appendChild(script);
-      });
-    }
-
     async function startPhotoRecordApp() {
-      const jsZipReady = await ensureJSZip();
-
-      // app.js can still initialize the interface if JSZip is unavailable.
-      // Word generation remains unavailable until JSZip can be loaded.
-      try {
-        await loadAppScript();
-      } catch (error) {
-        console.error("app.js failed to load:", error);
-        return;
-      }
-
-      if (!jsZipReady) {
-        console.error("JSZip is currently unavailable. Word generation is disabled.");
-      }
+      await ensureJSZip();
+      if (document.querySelector('script[data-photo-record-app]')) return;
+      const script = document.createElement("script");
+      script.src = "./app.js";
+      script.dataset.photoRecordApp = "true";
+      document.body.appendChild(script);
     }
 
     startPhotoRecordApp();
-  </script>
 
-  <!-- Register the Service Worker for offline app-shell caching. -->
-  <script>
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", async () => {
-        try {
-          const registration = await navigator.serviceWorker.register("./sw.js");
-          console.log("Service Worker registered:", registration.scope);
-        } catch (error) {
-          console.error("Service Worker registration failed:", error);
-        }
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(error =>
+          console.error("Service Worker registration failed:", error)
+        );
       });
     }
   </script>
