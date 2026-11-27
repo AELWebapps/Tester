@@ -1,7 +1,7 @@
 "use strict";
 
 /*
- * PHOTO RECORD GENERATOR V3
+ * PHOTO RECORD GENERATOR V4
  * Required Word placeholders:
  * {{SERVICE_DATE}}, {{LOCATION}}, {{PHOTO_TABLE}}
  */
