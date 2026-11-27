@@ -6,7 +6,14 @@
  * {{SERVICE_DATE}}, {{LOCATION}}, {{PHOTO_TABLE}}
  */
 
-document.addEventListener("DOMContentLoaded", initializeApp);
+if (!window.__photoRecordAppRegistered) {
+    window.__photoRecordAppRegistered = true;
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initializeApp, { once: true });
+    } else {
+      initializeApp();
+    }
+  }
 
 function initializeApp() {
   const elements = {
@@ -16,6 +23,7 @@ function initializeApp() {
     serviceDates: document.querySelector("#serviceDates"),
     addServiceDateButton: document.querySelector("#addServiceDateButton"),
     locationInput: document.querySelector("#location"),
+    supportingPhotosInput: document.querySelector("#supportingPhotos"),
     fitOnePageMode: document.querySelector("#fitOnePageMode"),
     sixPhotosPerPageMode: document.querySelector("#sixPhotosPerPageMode"),
     fourPhotosPerPageMode: document.querySelector("#fourPhotosPerPageMode"),
@@ -276,6 +284,7 @@ function initializeApp() {
     const serviceDates = getServiceDates();
     const serviceDate = serviceDates[0] || "";
     const location = elements.locationInput.value.trim();
+    const supportingPhotos = elements.supportingPhotosInput.value.trim();
     const fitOnePage = elements.fitOnePageMode.checked;
     const sixPhotosPerPage = elements.sixPhotosPerPageMode.checked;
     const fourPhotosPerPage = elements.fourPhotosPerPageMode.checked;
@@ -309,10 +318,11 @@ function initializeApp() {
       let documentXml = await documentFile.async("string");
       let relationshipsXml = await relationshipsFile.async("string");
       let contentTypesXml = await contentTypesFile.async("string");
-      const formattedServiceDate = serviceDates.map(formatDate).join("、");
+      const formattedServiceDate = serviceDates.map(formatDate).join(" ~ ");
 
       documentXml = replaceTextPlaceholder(documentXml, "{{SERVICE_DATE}}", formattedServiceDate);
       documentXml = replaceTextPlaceholder(documentXml, "{{LOCATION}}", location);
+      documentXml = replaceTextPlaceholder(documentXml, "{{SUPPORTING_PHOTOS}}", supportingPhotos);
 
       const imageRecords = [];
       for (let index = 0; index < photos.length; index += 1) {
@@ -736,15 +746,17 @@ function initializeApp() {
   }
 
   function formatDate(value) {
-    const date = new Date(`${value}T00:00:00`);
-    if (Number.isNaN(date.getTime())) throw new Error("服務日期無效。");
-    return new Intl.DateTimeFormat("zh-HK", {
-      year: "numeric",
+    const [year, month, day] = String(value).split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    if (!year || !month || !day || Number.isNaN(date.getTime())) {
+      throw new Error("Invalid service date.");
+    }
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
       month: "long",
-      day: "2-digit"
+      year: "numeric"
     }).format(date);
   }
-
   function escapeXml(value) {
     return String(value)
       .replaceAll("&", "&amp;")
